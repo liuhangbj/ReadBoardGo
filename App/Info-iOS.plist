@@ -15,6 +15,10 @@
     </dict>
     <key>NSLocalNetworkUsageDescription</key>
     <string>连接您自己的 ReadBoard 服务以同步和阅读内容。</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_readboard._tcp</string>
+    </array>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UISupportedInterfaceOrientations</key>

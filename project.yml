@@ -14,7 +14,10 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
-      - App
+      - path: App
+        excludes:
+          - Info-iOS.plist
+          - Info-macOS.plist
     dependencies:
       - package: ReadBoardGoCore
         product: ReadBoardGoCore
@@ -33,7 +36,10 @@ targets:
     platform: macOS
     deploymentTarget: "14.0"
     sources:
-      - App
+      - path: App
+        excludes:
+          - Info-iOS.plist
+          - Info-macOS.plist
     dependencies:
       - package: ReadBoardGoCore
         product: ReadBoardGoCore

@@ -10,13 +10,22 @@ public final class ReadBoardGoSession {
     public private(set) var profile: RemoteServerProfile?
     public private(set) var isWorking = false
     public private(set) var errorMessage: String?
+    public private(set) var trustCandidate: ServerTrustCandidate?
+    public let discovery = ReadBoardDiscovery()
 
     private let store: any ConnectionStoring
 
     public init(store: any ConnectionStoring = KeychainConnectionStore()) {
         self.store = store
         do {
-            connection = try store.load()
+            let stored = try store.load()
+            if let stored, stored.baseURL.scheme == "https",
+               stored.certificateFingerprint != nil {
+                connection = stored
+            } else if stored != nil {
+                try store.delete()
+                errorMessage = "服务端已升级为 HTTPS，请重新登录一次"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -32,22 +41,91 @@ public final class ReadBoardGoSession {
         profile?.capabilities.contains(capability) ?? false
     }
 
-    public func pair(serverAddress: String, code: String, deviceName: String) async {
+    public func select(_ server: DiscoveredReadBoardServer) {
+        guard let baseURL = server.baseURLs.first else { return }
+        trustCandidate = ServerTrustCandidate(name: server.name, baseURL: baseURL,
+            certificateFingerprint: server.certificateFingerprint)
+        errorMessage = nil
+    }
+
+    public func inspectServer(address: String) async {
         isWorking = true
         errorMessage = nil
         defer { isWorking = false }
         do {
-            let baseURL = try ServerAddressNormalizer.normalize(serverAddress)
-            let pairingCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !pairingCode.isEmpty else { throw ReadBoardGoConnectionError.emptyPairingCode }
-            let credential = try await RemotePairingClient.pair(
-                baseURL: baseURL, code: pairingCode, deviceName: deviceName)
-            let value = StoredServerConnection(baseURL: baseURL, credential: credential)
-            let profile = try await ReadBoardHTTPClient(
-                baseURL: baseURL, bearerToken: credential.token).profile()
+            let baseURL = try ServerAddressNormalizer.normalize(address)
+            let fingerprint = try await PinnedHTTPS.inspectCertificate(at: baseURL)
+            trustCandidate = ServerTrustCandidate(name: baseURL.host ?? "ReadBoard",
+                baseURL: baseURL, certificateFingerprint: fingerprint)
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func cancelTrustCandidate() {
+        trustCandidate = nil
+        errorMessage = nil
+    }
+
+    public func login(password: String, deviceName: String) async {
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            guard let trustCandidate else {
+                throw ReadBoardGoConnectionError.certificateNotTrusted
+            }
+            let session = PinnedHTTPS.session(
+                certificateFingerprint: trustCandidate.certificateFingerprint)
+            let credential = try await RemotePasswordLoginClient.login(
+                baseURL: trustCandidate.baseURL, password: password,
+                deviceName: deviceName, session: session)
+            let value = StoredServerConnection(baseURL: trustCandidate.baseURL,
+                credential: credential,
+                certificateFingerprint: trustCandidate.certificateFingerprint)
+            let profile = try await ReadBoardHTTPClient(baseURL: trustCandidate.baseURL,
+                bearerToken: credential.token, session: session).profile()
             try store.save(value)
             connection = value
             self.profile = profile
+            self.trustCandidate = nil
+            discovery.stop()
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func pair(code: String, deviceName: String) async {
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            guard let trustCandidate else {
+                throw ReadBoardGoConnectionError.certificateNotTrusted
+            }
+            let pairingCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !pairingCode.isEmpty else { throw ReadBoardGoConnectionError.emptyPairingCode }
+            let session = PinnedHTTPS.session(
+                certificateFingerprint: trustCandidate.certificateFingerprint)
+            let credential = try await RemotePairingClient.pair(
+                baseURL: trustCandidate.baseURL, code: pairingCode,
+                deviceName: deviceName, session: session)
+            let value = StoredServerConnection(baseURL: trustCandidate.baseURL,
+                credential: credential,
+                certificateFingerprint: trustCandidate.certificateFingerprint)
+            let profile = try await ReadBoardHTTPClient(baseURL: trustCandidate.baseURL,
+                bearerToken: credential.token, session: session).profile()
+            try store.save(value)
+            connection = value
+            self.profile = profile
+            self.trustCandidate = nil
+            discovery.stop()
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -67,6 +145,7 @@ public final class ReadBoardGoSession {
         do { try store.delete() } catch { errorMessage = error.localizedDescription }
         connection = nil
         profile = nil
+        trustCandidate = nil
     }
 
     public func libraryPage(_ query: ContentQuery = ContentQuery()) async throws -> ContentPage {
@@ -101,6 +180,9 @@ public final class ReadBoardGoSession {
     }
 
     private func client(for connection: StoredServerConnection) -> ReadBoardHTTPClient {
-        ReadBoardHTTPClient(baseURL: connection.baseURL, bearerToken: connection.token)
+        let fingerprint = connection.certificateFingerprint ?? ""
+        return ReadBoardHTTPClient(baseURL: connection.baseURL,
+            bearerToken: connection.token,
+            session: PinnedHTTPS.session(certificateFingerprint: fingerprint))
     }
 }

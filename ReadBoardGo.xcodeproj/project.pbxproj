@@ -10,7 +10,6 @@
 		0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
 		0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
 		1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
-		267FABD189C3F527B489D3F7 /* Info-macOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = E661A9AB6935FA5E5106CED0 /* Info-macOS.plist */; };
 		274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
 		3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = BE07D790CD04394F5E4C0677 /* ReadBoardContract */; };
 		44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
@@ -18,7 +17,6 @@
 		651770E51B95355EA25E4C68 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
 		710DB54AD197F8E4C736D3B6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
 		72AC547A0018CE51C471E371 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
-		7DFB398473C4856C5680F734 /* Info-iOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 802112241BFB33E9E95F051F /* Info-iOS.plist */; };
 		8C51452DD8DBC7D9CFF79EF8 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
 		9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */; };
 		9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
@@ -39,11 +37,9 @@
 		3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBoardGoMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
-		802112241BFB33E9E95F051F /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-iOS.plist"; sourceTree = "<group>"; };
 		91254373EB036B19C1207030 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
 		96AF6499D545B04A0B18785F /* readboard-go */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "readboard-go"; path = .; sourceTree = SOURCE_ROOT; };
 		A3906F9F3F41EC6D1475D255 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		E661A9AB6935FA5E5106CED0 /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-macOS.plist"; sourceTree = "<group>"; };
 		F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBoardGoApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -100,8 +96,6 @@
 			children = (
 				3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */,
 				0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */,
-				802112241BFB33E9E95F051F /* Info-iOS.plist */,
-				E661A9AB6935FA5E5106CED0 /* Info-macOS.plist */,
 				6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */,
 				A3906F9F3F41EC6D1475D255 /* MainTabView.swift */,
 				91254373EB036B19C1207030 /* OperationsView.swift */,
@@ -120,7 +114,6 @@
 			buildConfigurationList = 026A3A9BA9838A3264B25B21 /* Build configuration list for PBXNativeTarget "ReadBoardGoMac" */;
 			buildPhases = (
 				C7BC491CD4B071C35FA7CD1E /* Sources */,
-				41C5B8DC0A0EE1B9244AB21D /* Resources */,
 				CAB31DE664108876AB1C0120 /* Frameworks */,
 			);
 			buildRules = (
@@ -141,7 +134,6 @@
 			buildConfigurationList = 6885C25D637A26F2F4A909AB /* Build configuration list for PBXNativeTarget "ReadBoardGo" */;
 			buildPhases = (
 				3EE46510BA3D0AE9D0CDF68E /* Sources */,
-				E410CE078A9CF7EFEE9A5259 /* Resources */,
 				74497EAD6D2698789AEC08F8 /* Frameworks */,
 			);
 			buildRules = (
@@ -197,25 +189,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXResourcesBuildPhase section */
-		41C5B8DC0A0EE1B9244AB21D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				7DFB398473C4856C5680F734 /* Info-iOS.plist in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E410CE078A9CF7EFEE9A5259 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				267FABD189C3F527B489D3F7 /* Info-macOS.plist in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		3EE46510BA3D0AE9D0CDF68E /* Sources */ = {
