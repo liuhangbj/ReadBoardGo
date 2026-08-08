@@ -1,0 +1,61 @@
+name: ReadBoardGo
+options:
+  minimumXcodeGenVersion: 2.46.0
+  createIntermediateGroups: true
+packages:
+  ReadBoardGoCore:
+    path: .
+  ReadBoard:
+    url: https://github.com/liuhangbj/ReadBoard.git
+    branch: codex/service-middleware-foundation
+targets:
+  ReadBoardGo:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - App
+    dependencies:
+      - package: ReadBoardGoCore
+        product: ReadBoardGoCore
+      - package: ReadBoard
+        product: ReadBoardContract
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo
+        PRODUCT_NAME: ReadBoard Go
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: App/Info-iOS.plist
+        CODE_SIGN_STYLE: Automatic
+  ReadBoardGoMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - App
+    dependencies:
+      - package: ReadBoardGoCore
+        product: ReadBoardGoCore
+      - package: ReadBoard
+        product: ReadBoardContract
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo.mac
+        PRODUCT_NAME: ReadBoard Go
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: App/Info-macOS.plist
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  ReadBoardGo:
+    build:
+      targets:
+        ReadBoardGo: all
+    run:
+      config: Debug
+  ReadBoardGoMac:
+    build:
+      targets:
+        ReadBoardGoMac: all
+    run:
+      config: Debug

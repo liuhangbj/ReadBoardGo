@@ -1,0 +1,519 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
+		0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
+		1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
+		267FABD189C3F527B489D3F7 /* Info-macOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = E661A9AB6935FA5E5106CED0 /* Info-macOS.plist */; };
+		274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
+		3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = BE07D790CD04394F5E4C0677 /* ReadBoardContract */; };
+		44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
+		592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
+		651770E51B95355EA25E4C68 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
+		710DB54AD197F8E4C736D3B6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
+		72AC547A0018CE51C471E371 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
+		7DFB398473C4856C5680F734 /* Info-iOS.plist in Resources */ = {isa = PBXBuildFile; fileRef = 802112241BFB33E9E95F051F /* Info-iOS.plist */; };
+		8C51452DD8DBC7D9CFF79EF8 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
+		9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */; };
+		9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
+		A13ED6AD71111DA800FC3DE8 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = 5F358149DD97900A485D2CDF /* ReadBoardContract */; };
+		A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
+		A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
+		B5CB5F6CD8F665847803A43E /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
+		B8C247F352963A22791F57CD /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
+		D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */; };
+		FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ReadBoardGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0BFFA1B3192D0547CC8A1C60 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoSettingsView.swift; sourceTree = "<group>"; };
+		3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+		3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBoardGoMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
+		6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		802112241BFB33E9E95F051F /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-iOS.plist"; sourceTree = "<group>"; };
+		91254373EB036B19C1207030 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
+		96AF6499D545B04A0B18785F /* readboard-go */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "readboard-go"; path = .; sourceTree = SOURCE_ROOT; };
+		A3906F9F3F41EC6D1475D255 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		E661A9AB6935FA5E5106CED0 /* Info-macOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Info-macOS.plist"; sourceTree = "<group>"; };
+		F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBoardGoApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		74497EAD6D2698789AEC08F8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */,
+				3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CAB31DE664108876AB1C0120 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */,
+				A13ED6AD71111DA800FC3DE8 /* ReadBoardContract in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4BE1390E3C85113D992A1C03 = {
+			isa = PBXGroup;
+			children = (
+				FAE60E71606E1AA6470C73C2 /* App */,
+				69C2A83D21B3DB6556CDDED0 /* Packages */,
+				4D895125B50003E723BD850D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4D895125B50003E723BD850D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */,
+				3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		69C2A83D21B3DB6556CDDED0 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				96AF6499D545B04A0B18785F /* readboard-go */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		FAE60E71606E1AA6470C73C2 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */,
+				0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */,
+				802112241BFB33E9E95F051F /* Info-iOS.plist */,
+				E661A9AB6935FA5E5106CED0 /* Info-macOS.plist */,
+				6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */,
+				A3906F9F3F41EC6D1475D255 /* MainTabView.swift */,
+				91254373EB036B19C1207030 /* OperationsView.swift */,
+				F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */,
+				0BFFA1B3192D0547CC8A1C60 /* RootView.swift */,
+				65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0F1C9143F972FC7D868CF595 /* ReadBoardGoMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 026A3A9BA9838A3264B25B21 /* Build configuration list for PBXNativeTarget "ReadBoardGoMac" */;
+			buildPhases = (
+				C7BC491CD4B071C35FA7CD1E /* Sources */,
+				41C5B8DC0A0EE1B9244AB21D /* Resources */,
+				CAB31DE664108876AB1C0120 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadBoardGoMac;
+			packageProductDependencies = (
+				0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */,
+				5F358149DD97900A485D2CDF /* ReadBoardContract */,
+			);
+			productName = ReadBoardGoMac;
+			productReference = 3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B15A216F3E9463B77568386F /* ReadBoardGo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6885C25D637A26F2F4A909AB /* Build configuration list for PBXNativeTarget "ReadBoardGo" */;
+			buildPhases = (
+				3EE46510BA3D0AE9D0CDF68E /* Sources */,
+				E410CE078A9CF7EFEE9A5259 /* Resources */,
+				74497EAD6D2698789AEC08F8 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadBoardGo;
+			packageProductDependencies = (
+				0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */,
+				BE07D790CD04394F5E4C0677 /* ReadBoardContract */,
+			);
+			productName = ReadBoardGo;
+			productReference = 031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0510E4E9B0E7D258F3A73D91 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0F1C9143F972FC7D868CF595 = {
+						ProvisioningStyle = Automatic;
+					};
+					B15A216F3E9463B77568386F = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 84A893000CD5EFF5639661AF /* Build configuration list for PBXProject "ReadBoardGo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 4BE1390E3C85113D992A1C03;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */,
+				C9C19F5493C25DE67ED7CAF7 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4D895125B50003E723BD850D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B15A216F3E9463B77568386F /* ReadBoardGo */,
+				0F1C9143F972FC7D868CF595 /* ReadBoardGoMac */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		41C5B8DC0A0EE1B9244AB21D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7DFB398473C4856C5680F734 /* Info-iOS.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E410CE078A9CF7EFEE9A5259 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				267FABD189C3F527B489D3F7 /* Info-macOS.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3EE46510BA3D0AE9D0CDF68E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */,
+				A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */,
+				A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */,
+				44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */,
+				274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */,
+				8C51452DD8DBC7D9CFF79EF8 /* ReadBoardGoApp.swift in Sources */,
+				710DB54AD197F8E4C736D3B6 /* RootView.swift in Sources */,
+				651770E51B95355EA25E4C68 /* SourcesView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C7BC491CD4B071C35FA7CD1E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */,
+				592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */,
+				1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */,
+				0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */,
+				9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */,
+				72AC547A0018CE51C471E371 /* ReadBoardGoApp.swift in Sources */,
+				B8C247F352963A22791F57CD /* RootView.swift in Sources */,
+				B5CB5F6CD8F665847803A43E /* SourcesView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3BA0AB782B0EEFF807EB73CA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = "App/Info-iOS.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo;
+				PRODUCT_NAME = "ReadBoard Go";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		43CEDFF34FD2D3714F133FC5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "App/Info-macOS.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo.mac;
+				PRODUCT_NAME = "ReadBoard Go";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		4D2CB6D8BC2B1FB100C3E7EA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		5963DD8357598E348DA1E1EF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = "App/Info-iOS.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo;
+				PRODUCT_NAME = "ReadBoard Go";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A24CBEA76659EE4200851559 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "App/Info-macOS.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo.mac;
+				PRODUCT_NAME = "ReadBoard Go";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AC15BDF729EC2EE21691C00A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		026A3A9BA9838A3264B25B21 /* Build configuration list for PBXNativeTarget "ReadBoardGoMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				43CEDFF34FD2D3714F133FC5 /* Debug */,
+				A24CBEA76659EE4200851559 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6885C25D637A26F2F4A909AB /* Build configuration list for PBXNativeTarget "ReadBoardGo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5963DD8357598E348DA1E1EF /* Debug */,
+				3BA0AB782B0EEFF807EB73CA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		84A893000CD5EFF5639661AF /* Build configuration list for PBXProject "ReadBoardGo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC15BDF729EC2EE21691C00A /* Debug */,
+				4D2CB6D8BC2B1FB100C3E7EA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C9C19F5493C25DE67ED7CAF7 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/liuhangbj/ReadBoard.git";
+			requirement = {
+				branch = "codex/service-middleware-foundation";
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardGoCore;
+		};
+		0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardGoCore;
+		};
+		5F358149DD97900A485D2CDF /* ReadBoardContract */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */;
+			productName = ReadBoardContract;
+		};
+		BE07D790CD04394F5E4C0677 /* ReadBoardContract */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */;
+			productName = ReadBoardContract;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0510E4E9B0E7D258F3A73D91 /* Project object */;
+}
