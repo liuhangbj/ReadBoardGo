@@ -1,13 +1,13 @@
 {
-  "originHash" : "a52eed62280ff0ee7dae6abb58d5a973a993d387dd84a9837d2b1e528223844b",
+  "originHash" : "7ba459f949a306113dafbb0ae57af4f0de8fccaab4e60fa6b7036e7ee5655dcf",
   "pins" : [
     {
       "identity" : "readboard",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/liuhangbj/ReadBoard.git",
       "state" : {
-        "branch" : "codex/service-middleware-foundation",
-        "revision" : "674f8051a965d0ab0d2bd5ef7d07bb3289989c3f"
+        "branch" : "main",
+        "revision" : "61faf5bc30e30e157aa0827906b043a07ccececa"
       }
     }
   ],

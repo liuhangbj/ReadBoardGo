@@ -7,7 +7,7 @@ packages:
     path: .
   ReadBoard:
     url: https://github.com/liuhangbj/ReadBoard.git
-    branch: codex/service-middleware-foundation
+    branch: main
 targets:
   ReadBoardGo:
     type: application

@@ -10,7 +10,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/liuhangbj/ReadBoard.git",
-            branch: "codex/service-middleware-foundation"
+            branch: "main"
         ),
     ],
     targets: [

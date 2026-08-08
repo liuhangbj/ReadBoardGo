@@ -160,6 +160,11 @@ public final class ReadBoardGoSession {
         try await RemoteLibraryGateway(client: try client()).setRead(contentID: id, isRead: value)
     }
 
+    public func setStarred(id: Int64, value: Bool) async throws -> ContentState {
+        try await RemoteLibraryGateway(client: try client())
+            .setStarred(contentID: id, isStarred: value)
+    }
+
     public func sourceCatalog() async throws -> SourceCatalogSnapshot {
         try await RemoteSourceCatalogGateway(client: try client()).snapshot()
     }

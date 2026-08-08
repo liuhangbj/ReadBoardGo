@@ -11,6 +11,7 @@
 		0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
 		1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
 		274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
+		32563781689AAC6EE3E5243A /* ArticleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C767767F38F99F906683F77 /* ArticleDetailView.swift */; };
 		3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = BE07D790CD04394F5E4C0677 /* ReadBoardContract */; };
 		44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
 		592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
@@ -21,10 +22,13 @@
 		9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */; };
 		9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
 		A13ED6AD71111DA800FC3DE8 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = 5F358149DD97900A485D2CDF /* ReadBoardContract */; };
+		A229BD85A3AD596226F6C0A4 /* ArticleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C767767F38F99F906683F77 /* ArticleDetailView.swift */; };
 		A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
 		A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
+		A4EC1E9CE60CF2D76163B64F /* LibraryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F27B1E95756E0720AD88092 /* LibraryRow.swift */; };
 		B5CB5F6CD8F665847803A43E /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
 		B8C247F352963A22791F57CD /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
+		C11D62169BE8003551F47196 /* LibraryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F27B1E95756E0720AD88092 /* LibraryRow.swift */; };
 		D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */; };
 		FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
 /* End PBXBuildFile section */
@@ -33,7 +37,9 @@
 		031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ReadBoardGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0BFFA1B3192D0547CC8A1C60 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoSettingsView.swift; sourceTree = "<group>"; };
+		2F27B1E95756E0720AD88092 /* LibraryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRow.swift; sourceTree = "<group>"; };
 		3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+		3C767767F38F99F906683F77 /* ArticleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleDetailView.swift; sourceTree = "<group>"; };
 		3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBoardGoMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
@@ -94,8 +100,10 @@
 		FAE60E71606E1AA6470C73C2 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				3C767767F38F99F906683F77 /* ArticleDetailView.swift */,
 				3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */,
 				0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */,
+				2F27B1E95756E0720AD88092 /* LibraryRow.swift */,
 				6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */,
 				A3906F9F3F41EC6D1475D255 /* MainTabView.swift */,
 				91254373EB036B19C1207030 /* OperationsView.swift */,
@@ -195,8 +203,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A229BD85A3AD596226F6C0A4 /* ArticleDetailView.swift in Sources */,
 				0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */,
 				A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */,
+				C11D62169BE8003551F47196 /* LibraryRow.swift in Sources */,
 				A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */,
 				44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */,
 				274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */,
@@ -210,8 +220,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				32563781689AAC6EE3E5243A /* ArticleDetailView.swift in Sources */,
 				FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */,
 				592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */,
+				A4EC1E9CE60CF2D76163B64F /* LibraryRow.swift in Sources */,
 				1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */,
 				0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */,
 				9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */,
@@ -461,7 +473,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/liuhangbj/ReadBoard.git";
 			requirement = {
-				branch = "codex/service-middleware-foundation";
+				branch = main;
 				kind = branch;
 			};
 		};

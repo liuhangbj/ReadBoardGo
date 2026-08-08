@@ -9,7 +9,9 @@ ReadBoard Go 是 ReadBoard 的独立远程客户端，面向 iPhone、iPad 和 M
 - 一次性配对码作为备用连接方式
 - Keychain 保存设备凭据
 - 读取服务能力与设备权限
-- 基础文章列表、正文、订阅源和运行状态界面
+- 支持搜索、筛选和游标分页的内容列表
+- 原文、译文和转录切换，支持已读与收藏状态同步
+- 订阅源和运行状态界面
 - iOS 17+ 与 macOS 14+ 工程
 
 ## 开发
@@ -26,6 +28,6 @@ macOS 本地构建并启动：
 ./script/build_and_run.sh --verify
 ```
 
-当前依赖 ReadBoard 的 `codex/service-middleware-foundation` 分支。服务端中间层合并并发布首个 API tag 后，应改为固定的语义版本依赖。
+当前依赖 ReadBoard 的 `main` 分支。服务端发布首个稳定 API tag 后，应改为固定的语义版本依赖。
 
 所有连接均使用 HTTPS，并固定首次信任的服务器证书。当前自签名证书适合可信局域网；直接公网访问仍应配合正式域名证书或安全隧道。
