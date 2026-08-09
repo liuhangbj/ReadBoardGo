@@ -50,6 +50,7 @@ enum GoRemoteServicesFactory {
       configuration: RemoteConfigurationGateway(client: client),
       authentication: RemoteAuthenticationGateway(client: client),
       maintenance: RemoteMaintenanceGateway(client: client),
+      dependencyManagement: RemoteDependencyManagementGateway(client: client),
       remoteAccess: nil,
       remoteCapabilities: session.profile?.capabilities ?? [],
       remoteScopes: session.profile?.grantedScopes ?? session.connection?.scopes ?? [])

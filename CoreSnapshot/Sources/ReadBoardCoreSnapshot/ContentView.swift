@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import QuartzCore
 import ReadBoardContract
+import ReadBoardFeatures
 import ReadBoardSharedUI
 
 public struct ContentView: View {
@@ -10,7 +11,7 @@ public struct ContentView: View {
     @StateObject private var sourceCatalog: SourceCatalogStore
     @EnvironmentObject private var appTab: AppTab
     @Environment(\.openSettings) private var openSettings
-    @StateObject private var issueCenter: IssueCenterStore
+    @State private var issueCenter: ReadBoardIssueCenterModel
     @State private var showIssueCenter = false
     @FocusState private var listFocused: Bool
     @FocusState private var searchFocused: Bool
@@ -22,13 +23,8 @@ public struct ContentView: View {
             permissions: services.permissions))
         _sourceCatalog = StateObject(
             wrappedValue: SourceCatalogStore(gateway: services.sourceCatalog))
-        _issueCenter = StateObject(wrappedValue: IssueCenterStore(
-            sourceCatalog: services.sourceCatalog,
-            runtimeStatus: services.runtimeStatus,
-            administration: services.administration,
-            authentication: services.authentication,
-            configuration: services.configuration,
-            permissions: services.permissions))
+        _issueCenter = State(initialValue: ReadBoardIssueCenterModel(
+            environment: services.featureEnvironment))
     }
 
     public var body: some View {
@@ -62,30 +58,27 @@ public struct ContentView: View {
             ShortcutHelpView()
         }
         .sheet(isPresented: $showIssueCenter) {
-            IssueCenterView(
-                store: issueCenter,
-                sourceCatalog: services.sourceCatalog,
-                sourceManagement: services.sourceManagement,
-                runtimeStatus: services.runtimeStatus,
-                administration: services.administration,
-                sourceCatalogSnapshot: { sourceCatalog.snapshot },
-                onOpenSettings: { route in
+            ReadBoardIssueCenterView(environment: services.featureEnvironment) { action in
+                switch action {
+                case .openSources: appTab.selection = 1
+                case .openOperations: appTab.selection = 3
+                case .openSettings(let route):
                     SettingsNavigationStore.shared.request(route)
                     openSettings()
-                },
-                onOpenDashboard: { appTab.selection = 3 })
+                }
+            }
         }
         .task {
             while !Task.isCancelled {
                 if services.permissions.allows(.manageSources, capability: .sourceManagement) {
                     await sourceCatalog.refresh()
                 }
-                await issueCenter.refresh(sourceCatalogOverride: sourceCatalog.snapshot)
+                await issueCenter.refresh()
                 try? await Task.sleep(nanoseconds: 30_000_000_000)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .pipelinePendingUpdated)) { _ in
-            Task { await issueCenter.refresh(sourceCatalogOverride: sourceCatalog.snapshot) }
+            Task { await issueCenter.refresh() }
         }
     }
 

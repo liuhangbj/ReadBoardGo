@@ -250,6 +250,7 @@ public final class ReadBoardGoSession {
             configuration: RemoteConfigurationGateway(client: client),
             authentication: RemoteAuthenticationGateway(client: client),
             maintenance: RemoteMaintenanceGateway(client: client),
+            dependencyManagement: RemoteDependencyManagementGateway(client: client),
             permissions: ReadBoardFeaturePermissions(
                 capabilities: profile?.capabilities ?? [],
                 scopes: profile?.grantedScopes ?? connection?.scopes ?? []))

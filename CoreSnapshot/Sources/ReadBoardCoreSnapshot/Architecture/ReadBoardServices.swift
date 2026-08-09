@@ -17,6 +17,7 @@ public struct ReadBoardServices: Sendable {
     public let configuration: any ConfigurationGateway
     public let authentication: any AuthenticationGateway
     public let maintenance: any MaintenanceGateway
+    public let dependencyManagement: (any DependencyManagementGateway)?
     /// 仅宿主机能配置监听地址、配对和设备撤销；Go 远程客户端传 nil。
     public let remoteAccess: (any RemoteAccessGateway)?
     public let remoteCapabilities: [RemoteServiceCapability]
@@ -36,6 +37,7 @@ public struct ReadBoardServices: Sendable {
         configuration: any ConfigurationGateway,
         authentication: any AuthenticationGateway,
         maintenance: any MaintenanceGateway,
+        dependencyManagement: (any DependencyManagementGateway)? = nil,
         remoteAccess: (any RemoteAccessGateway)?,
         remoteCapabilities: [RemoteServiceCapability] = RemoteServiceCapability.allCases,
         remoteScopes: [RemoteAccessScope] = RemoteAccessScope.fullControl
@@ -53,6 +55,7 @@ public struct ReadBoardServices: Sendable {
         self.configuration = configuration
         self.authentication = authentication
         self.maintenance = maintenance
+        self.dependencyManagement = dependencyManagement
         self.remoteAccess = remoteAccess
         self.remoteCapabilities = remoteCapabilities
         self.remoteScopes = remoteScopes
@@ -97,6 +100,7 @@ public struct ReadBoardServices: Sendable {
             configuration: configuration,
             authentication: authentication,
             maintenance: maintenance,
+            dependencyManagement: dependencyManagement,
             permissions: permissions)
     }
 }

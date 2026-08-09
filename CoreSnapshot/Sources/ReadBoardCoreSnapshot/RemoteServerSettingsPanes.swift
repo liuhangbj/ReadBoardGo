@@ -5,13 +5,19 @@ import SwiftUI
 /// 从而避免把另一台 Mac 的本地路径误存进 ReadBoard 主机。
 public struct RemoteDepsPane: View {
     private let configuration: any ConfigurationGateway
+    private let dependencyManagement: (any DependencyManagementGateway)?
     @State private var dependencies: [DependencyStatus] = []
+    @State private var tasks: [DependencyTaskSnapshot] = []
     @State private var editingPaths: [String: String] = [:]
     @State private var message: String?
     @State private var isLoading = true
 
-    public init(configuration: any ConfigurationGateway) {
+    public init(
+        configuration: any ConfigurationGateway,
+        dependencyManagement: (any DependencyManagementGateway)? = nil
+    ) {
         self.configuration = configuration
+        self.dependencyManagement = dependencyManagement
     }
 
     public var body: some View {
@@ -46,6 +52,17 @@ public struct RemoteDepsPane: View {
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(dependency.installed ? Color.rbScoreHigh : Color.rbScoreMid)
                         }
+                        if let task = activeTask(for: dependency.id) {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Text(task.message).font(.caption).foregroundStyle(Color.rbText2)
+                                Spacer()
+                                Button("取消") { Task { await cancel(task) } }.controlSize(.small)
+                            }
+                        } else if let latest = tasks.first(where: { $0.dependencyID == dependency.id }),
+                                  latest.phase == .failed {
+                            Text(latest.message).font(.caption).foregroundStyle(Color.rbScoreLow)
+                        }
                         HStack(spacing: 8) {
                             TextField("服务端可执行文件或模型路径", text: pathBinding(for: dependency))
                                 .textFieldStyle(.roundedBorder)
@@ -53,6 +70,13 @@ public struct RemoteDepsPane: View {
                             Button("保存") { save(dependency) }
                                 .controlSize(.small)
                                 .disabled((editingPaths[dependency.id] ?? "") == (dependency.path ?? ""))
+                            if dependencyManagement != nil, supportsTask(dependency.id) {
+                                Button(dependency.installed ? "更新" : "安装") {
+                                    Task { await submit(dependency) }
+                                }
+                                .controlSize(.small)
+                                .disabled(activeTask(for: dependency.id) != nil)
+                            }
                         }
                         if dependency.customPathIsStale {
                             Text("已保存的服务端路径不可用，请修改或清空后重新检测。")
@@ -80,7 +104,13 @@ public struct RemoteDepsPane: View {
             }
         }
         .formStyle(.grouped)
-        .task { await reload() }
+        .task {
+            while !Task.isCancelled {
+                await reload()
+                let hasActive = tasks.contains { $0.phase == .queued || $0.phase == .running }
+                try? await Task.sleep(for: .seconds(hasActive ? 1 : 10))
+            }
+        }
     }
 
     private func pathBinding(for dependency: DependencyStatus) -> Binding<String> {
@@ -94,18 +124,47 @@ public struct RemoteDepsPane: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         Task {
             await configuration.setDependencyPath(id: dependency.id, path: path)
-            message = "已保存 (dependency.displayName) 的服务端路径"
+            message = "已保存 \(dependency.displayName) 的服务端路径"
             await reload()
         }
+    }
+
+    private func activeTask(for dependencyID: String) -> DependencyTaskSnapshot? {
+        tasks.first { $0.dependencyID == dependencyID && ($0.phase == .queued || $0.phase == .running) }
+    }
+
+    private func supportsTask(_ dependencyID: String) -> Bool {
+        ["node", "whisperCLI", "ffmpeg", "ytdlp", "whisperModel"].contains(dependencyID)
+    }
+
+    private func submit(_ dependency: DependencyStatus) async {
+        guard let dependencyManagement else { return }
+        do {
+            _ = try await dependencyManagement.submit(DependencyTaskRequest(
+                dependencyID: dependency.id,
+                operation: dependency.installed ? .update : .install))
+            await reload()
+        } catch { message = error.localizedDescription }
+    }
+
+    private func cancel(_ task: DependencyTaskSnapshot) async {
+        await dependencyManagement?.cancel(taskID: task.id)
+        await reload()
     }
 
     @MainActor
     private func reload() async {
         isLoading = true
         defer { isLoading = false }
-        let snapshot = await configuration.snapshot()
-        dependencies = snapshot.dependencies
-        editingPaths = Dictionary(uniqueKeysWithValues: snapshot.dependencies.map {
+        if let dependencyManagement {
+            let snapshot = await dependencyManagement.snapshot()
+            dependencies = snapshot.dependencies
+            tasks = snapshot.tasks
+        } else {
+            dependencies = await configuration.snapshot().dependencies
+            tasks = []
+        }
+        editingPaths = Dictionary(uniqueKeysWithValues: dependencies.map {
             ($0.id, $0.path ?? "")
         })
     }
