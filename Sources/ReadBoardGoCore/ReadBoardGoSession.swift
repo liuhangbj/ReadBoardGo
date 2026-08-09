@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import ReadBoardContract
+import ReadBoardFeatures
 import ReadBoardRemote
 
 @MainActor
@@ -9,19 +10,30 @@ public final class ReadBoardGoSession {
     public private(set) var connection: StoredServerConnection?
     public private(set) var profile: RemoteServerProfile?
     public private(set) var isWorking = false
+    public private(set) var isRestoringConnection = false
     public private(set) var errorMessage: String?
     public private(set) var trustCandidate: ServerTrustCandidate?
     public let discovery = ReadBoardDiscovery()
+    public let remoteHealth = ReadBoardRemoteHealthStore()
 
     private let store: any ConnectionStoring
 
-    public init(store: any ConnectionStoring = KeychainConnectionStore()) {
+    public init(store: any ConnectionStoring = DefaultConnectionStore()) {
         self.store = store
         do {
             let stored = try store.load()
             if let stored, stored.baseURL.scheme == "https",
                stored.certificateFingerprint != nil {
-                connection = stored
+                if let version = stored.apiVersion,
+                   version != ReadBoardRemoteAPI.version {
+                    try store.delete()
+                    errorMessage = ReadBoardGoConnectionError.apiVersionMismatch(
+                        client: ReadBoardRemoteAPI.version,
+                        server: version).localizedDescription
+                } else {
+                    connection = stored
+                    isRestoringConnection = true
+                }
             } else if stored != nil {
                 try store.delete()
                 errorMessage = "服务端已升级为 HTTPS，请重新登录一次"
@@ -31,7 +43,9 @@ public final class ReadBoardGoSession {
         }
     }
 
-    public var isConnected: Bool { connection != nil }
+    public var isConnected: Bool {
+        connection != nil && profile?.apiVersion == ReadBoardRemoteAPI.version
+    }
 
     public func hasScope(_ scope: RemoteAccessScope) -> Bool {
         profile?.grantedScopes.contains(scope) ?? connection?.scopes.contains(scope) ?? false
@@ -82,11 +96,13 @@ public final class ReadBoardGoSession {
             let credential = try await RemotePasswordLoginClient.login(
                 baseURL: trustCandidate.baseURL, password: password,
                 deviceName: deviceName, session: session)
+            try validateAPIVersion(credential.apiVersion)
             let value = StoredServerConnection(baseURL: trustCandidate.baseURL,
                 credential: credential,
                 certificateFingerprint: trustCandidate.certificateFingerprint)
             let profile = try await ReadBoardHTTPClient(baseURL: trustCandidate.baseURL,
                 bearerToken: credential.token, session: session).profile()
+            try validateAPIVersion(profile.apiVersion)
             try store.save(value)
             connection = value
             self.profile = profile
@@ -114,11 +130,13 @@ public final class ReadBoardGoSession {
             let credential = try await RemotePairingClient.pair(
                 baseURL: trustCandidate.baseURL, code: pairingCode,
                 deviceName: deviceName, session: session)
+            try validateAPIVersion(credential.apiVersion)
             let value = StoredServerConnection(baseURL: trustCandidate.baseURL,
                 credential: credential,
                 certificateFingerprint: trustCandidate.certificateFingerprint)
             let profile = try await ReadBoardHTTPClient(baseURL: trustCandidate.baseURL,
                 bearerToken: credential.token, session: session).profile()
+            try validateAPIVersion(profile.apiVersion)
             try store.save(value)
             connection = value
             self.profile = profile
@@ -133,10 +151,30 @@ public final class ReadBoardGoSession {
 
     public func refreshProfile() async {
         guard let connection else { return }
+        isRestoringConnection = true
+        defer { isRestoringConnection = false }
         do {
-            profile = try await client(for: connection).profile()
+            let loaded = try await client(for: connection).profile()
+            try validateAPIVersion(loaded.apiVersion)
+            profile = loaded
+            remoteHealth.reset()
+            let upgraded = StoredServerConnection(
+                copying: connection,
+                apiVersion: loaded.apiVersion)
+            try store.save(upgraded)
+            self.connection = upgraded
             errorMessage = nil
         } catch {
+            profile = nil
+            if let connectionError = error as? ReadBoardGoConnectionError,
+               case .apiVersionMismatch = connectionError {
+                try? store.delete()
+                self.connection = nil
+                remoteHealth.receive(.failed(
+                    path: "api/v1/server/profile",
+                    kind: .version,
+                    message: error.localizedDescription))
+            }
             errorMessage = error.localizedDescription
         }
     }
@@ -146,14 +184,25 @@ public final class ReadBoardGoSession {
         connection = nil
         profile = nil
         trustCandidate = nil
+        isRestoringConnection = false
+        remoteHealth.reset()
     }
 
     public func libraryPage(_ query: ContentQuery = ContentQuery()) async throws -> ContentPage {
         try await RemoteLibraryGateway(client: try client()).page(query)
     }
 
+    public func librarySnapshot() async throws -> LibrarySnapshot {
+        try await RemoteLibraryGateway(client: try client()).snapshot()
+    }
+
     public func contentDetail(id: Int64) async throws -> ContentDetail {
         try await RemoteContentDetailGateway(client: try client()).detail(contentID: id)
+    }
+
+    public func youtubeStream(videoID: String) async throws -> MediaPlaybackSource {
+        try await RemoteMediaPlaybackGateway(client: try client())
+            .youtubeStream(videoID: videoID)
     }
 
     public func setRead(id: Int64, value: Bool) async throws -> ContentState {
@@ -174,9 +223,42 @@ public final class ReadBoardGoSession {
         return await RemoteRuntimeStatusGateway(client: client).snapshot(refreshCounts: true)
     }
 
+    public func runProcessingScan() async {
+        guard let client = try? client() else { return }
+        await RemoteRuntimeStatusGateway(client: client).runProcessingScan()
+    }
+
     public func authenticationStatuses() async -> [PlatformAuthenticationStatus] {
         guard let client = try? client() else { return [] }
         return await RemoteAuthenticationGateway(client: client).statuses()
+    }
+
+    /// Go 与 Core 共同页面的远程装配入口。共享页面无需知道 HTTP、证书或登录态细节。
+    public func featureEnvironment() throws -> ReadBoardFeatureEnvironment {
+        let client = try client()
+        return ReadBoardFeatureEnvironment(
+            library: RemoteLibraryGateway(client: client),
+            contentDetail: RemoteContentDetailGateway(client: client),
+            mediaPlayback: RemoteMediaPlaybackGateway(client: client),
+            processing: RemoteProcessingGateway(client: client),
+            sourceManagement: RemoteSourceManagementGateway(client: client),
+            sourceCatalog: RemoteSourceCatalogGateway(client: client),
+            sourceOnboarding: RemoteSourceOnboardingGateway(client: client),
+            runtimeStatus: RemoteRuntimeStatusGateway(client: client),
+            export: RemoteExportGateway(client: client),
+            administration: RemoteAdministrationGateway(client: client),
+            configuration: RemoteConfigurationGateway(client: client),
+            authentication: RemoteAuthenticationGateway(client: client),
+            maintenance: RemoteMaintenanceGateway(client: client),
+            permissions: ReadBoardFeaturePermissions(
+                capabilities: profile?.capabilities ?? [],
+                scopes: profile?.grantedScopes ?? connection?.scopes ?? []))
+    }
+
+    /// 完整 Core 前端快照装配远程 gateway 时使用。客户端仍由会话统一创建，
+    /// 证书固定、令牌和超时策略不会在 App 层重复实现。
+    public func remoteClient() throws -> ReadBoardHTTPClient {
+        try client()
     }
 
     private func client() throws -> ReadBoardHTTPClient {
@@ -188,6 +270,19 @@ public final class ReadBoardGoSession {
         let fingerprint = connection.certificateFingerprint ?? ""
         return ReadBoardHTTPClient(baseURL: connection.baseURL,
             bearerToken: connection.token,
-            session: PinnedHTTPS.session(certificateFingerprint: fingerprint))
+            session: PinnedHTTPS.session(certificateFingerprint: fingerprint),
+            eventHandler: { [weak remoteHealth] event in
+                Task { @MainActor in
+                    remoteHealth?.receive(event)
+                }
+            })
+    }
+
+    private func validateAPIVersion(_ serverVersion: String) throws {
+        guard serverVersion == ReadBoardRemoteAPI.version else {
+            throw ReadBoardGoConnectionError.apiVersionMismatch(
+                client: ReadBoardRemoteAPI.version,
+                server: serverVersion)
+        }
     }
 }

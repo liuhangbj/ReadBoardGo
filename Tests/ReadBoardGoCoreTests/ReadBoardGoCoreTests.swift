@@ -1,8 +1,62 @@
+import Foundation
 import XCTest
 @testable import ReadBoardGoCore
 import ReadBoardContract
+import ReadBoardRemote
 
 final class ReadBoardGoCoreTests: XCTestCase {
+    func testMarkdownParserMatchesCoreReadingBlocks() {
+        let markdown = """
+        ---
+        title: Example
+        url: https://example.com
+        ---
+
+        # Heading
+
+        Paragraph with **bold** and [link](https://example.com).
+
+        - First
+        2. Second
+
+        > Quote
+
+        ```swift
+        let value = 1
+        ```
+
+        ![Cover](https://example.com/cover.jpg)
+        """
+        let blocks = GoMarkdownParser.parse(markdown)
+        XCTAssertEqual(blocks.count, 8)
+        XCTAssertEqual(blocks[0], .frontmatter(text: "title: Example\nurl: https://example.com"))
+        XCTAssertEqual(blocks[1], .heading(level: 1, text: "Heading"))
+        XCTAssertEqual(blocks[2], .paragraph(text: "Paragraph with **bold** and [link](https://example.com)."))
+        XCTAssertEqual(blocks[3], .listItem(ordered: false, index: 0, text: "First"))
+        XCTAssertEqual(blocks[4], .listItem(ordered: true, index: 2, text: "Second"))
+        XCTAssertEqual(blocks[5], .quote(text: "Quote"))
+        XCTAssertEqual(blocks[6], .codeBlock(lang: "swift", code: "let value = 1"))
+        XCTAssertEqual(blocks[7], .image(alt: "Cover", url: "https://example.com/cover.jpg"))
+    }
+
+    func testMarkdownParserSplitsMultipleImagesAndDropsTitles() {
+        let blocks = GoMarkdownParser.parse(
+            "![One](https://img.example/one.jpg) ![Two](https://img.example/two.jpg \"caption\")")
+        XCTAssertEqual(blocks, [
+            .image(alt: "One", url: "https://img.example/one.jpg"),
+            .image(alt: "Two", url: "https://img.example/two.jpg"),
+        ])
+    }
+
+    func testMarkdownParserAcceptsStandaloneHTMLImages() {
+        let blocks = GoMarkdownParser.parse(
+            #"<img src="https://img.example/one.jpg?a=1&amp;b=2" alt="One"><img src='https://img.example/two.jpg'>"#)
+        XCTAssertEqual(blocks, [
+            .image(alt: "One", url: "https://img.example/one.jpg?a=1&b=2"),
+            .image(alt: "", url: "https://img.example/two.jpg"),
+        ])
+    }
+
     func testServerAddressNormalizationAddsHTTPSAndDropsPaths() throws {
         XCTAssertEqual(try ServerAddressNormalizer.normalize("10.0.0.5:7331/path?x=1").absoluteString,
                        "https://10.0.0.5:7331/")
@@ -18,6 +72,67 @@ final class ReadBoardGoCoreTests: XCTestCase {
                                            certificateFingerprint: String(repeating: "a", count: 64))
         let data = try JSONEncoder().encode(value)
         XCTAssertEqual(try JSONDecoder().decode(StoredServerConnection.self, from: data), value)
+    }
+
+    func testPermissionRequiresBothAdvertisedCapabilityAndGrantedScope() {
+        let readOnly = ReadBoardPermissionSet(
+            capabilities: [.library, .processing],
+            scopes: [.readLibrary])
+        XCTAssertTrue(readOnly.allows(.readLibrary, capability: .library))
+        XCTAssertFalse(readOnly.allows(.updateReadingState, capability: .library))
+        XCTAssertFalse(readOnly.allows(.readLibrary, capability: .export))
+    }
+
+    @MainActor
+    func testRemoteHealthKeepsFailuresVisibleUntilTheirPathRecovers() {
+        let store = ReadBoardRemoteHealthStore()
+        store.receive(.failed(
+            path: "api/v1/admin/dashboard",
+            kind: .authorization,
+            message: "HTTP 403"))
+        store.receive(.failed(
+            path: "api/v1/library/page",
+            kind: .transport,
+            message: "offline"))
+        XCTAssertEqual(store.phase, .degraded)
+        XCTAssertEqual(store.failingPaths.count, 2)
+
+        store.receive(.succeeded(path: "api/v1/library/page"))
+        XCTAssertEqual(store.failingPaths, Set(["api/v1/admin/dashboard"]))
+        XCTAssertEqual(store.phase, .degraded)
+        XCTAssertNotNil(store.message)
+
+        store.receive(.succeeded(path: "api/v1/admin/dashboard"))
+        XCTAssertEqual(store.phase, .healthy)
+        XCTAssertNil(store.message)
+    }
+
+    func testFileConnectionStorePersistsWithoutKeychainInteraction() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "readboard-go-store-test-\(UUID().uuidString)",
+            isDirectory: true)
+        let file = directory.appendingPathComponent("connection.json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let credential = RemotePairingCredential(
+            deviceID: "device",
+            deviceName: "Mac",
+            token: "secret",
+            apiVersion: "1",
+            scopes: RemoteAccessScope.fullControl)
+        let value = StoredServerConnection(
+            baseURL: URL(string: "https://10.0.0.5:7331/")!,
+            credential: credential,
+            certificateFingerprint: String(repeating: "b", count: 64))
+        let store = FileConnectionStore(fileURL: file)
+
+        try store.save(value)
+        XCTAssertEqual(try store.load(), value)
+        let permissions = try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions]
+            as? NSNumber
+        XCTAssertEqual(permissions?.intValue, 0o600)
+        try store.delete()
+        XCTAssertNil(try store.load())
     }
 
     func testLiveTLSCertificatePinningWhenEnabled() async throws {

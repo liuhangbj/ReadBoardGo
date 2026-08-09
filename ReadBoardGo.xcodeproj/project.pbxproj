@@ -9,43 +9,56 @@
 /* Begin PBXBuildFile section */
 		0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
 		0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
+		1A4CFAECBCB7F959A4A1DC5D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */; };
 		1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
+		24F0C2C97D268152FEE7EF39 /* ReadBoardUI in Frameworks */ = {isa = PBXBuildFile; productRef = EBFCAD4A35F0BD739331A6B7 /* ReadBoardUI */; };
 		274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
-		32563781689AAC6EE3E5243A /* ArticleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C767767F38F99F906683F77 /* ArticleDetailView.swift */; };
+		2A9517AC8A7AA15C181A781B /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = 5F358149DD97900A485D2CDF /* ReadBoardContract */; };
+		31560622FBD69BD27572D3AB /* ReadBoardFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = FB5AF445B1AC029341A4AA6B /* ReadBoardFeatures */; };
 		3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = BE07D790CD04394F5E4C0677 /* ReadBoardContract */; };
 		44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
+		4BE975CA57F9B5B83097F15A /* ReadBoardRemote in Frameworks */ = {isa = PBXBuildFile; productRef = B7C08971FD535DFFB6007675 /* ReadBoardRemote */; };
+		4C83473A49D2A293B76C0FBC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */; };
 		592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
 		651770E51B95355EA25E4C68 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
 		710DB54AD197F8E4C736D3B6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
 		72AC547A0018CE51C471E371 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
 		8C51452DD8DBC7D9CFF79EF8 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
+		9B928C1788908672F3FB6673 /* CoreSnapshotRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C669032EBD406F2941E3C8BC /* CoreSnapshotRootView.swift */; };
 		9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */; };
 		9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
-		A13ED6AD71111DA800FC3DE8 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = 5F358149DD97900A485D2CDF /* ReadBoardContract */; };
-		A229BD85A3AD596226F6C0A4 /* ArticleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C767767F38F99F906683F77 /* ArticleDetailView.swift */; };
+		A13ED6AD71111DA800FC3DE8 /* ReadBoardCoreSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 722E3547B2A5B90DB278F2A4 /* ReadBoardCoreSnapshot */; };
+		A173014C048EEF638E19F954 /* CoreSnapshotRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C669032EBD406F2941E3C8BC /* CoreSnapshotRootView.swift */; };
 		A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */; };
 		A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
-		A4EC1E9CE60CF2D76163B64F /* LibraryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F27B1E95756E0720AD88092 /* LibraryRow.swift */; };
 		B5CB5F6CD8F665847803A43E /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
 		B8C247F352963A22791F57CD /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
-		C11D62169BE8003551F47196 /* LibraryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F27B1E95756E0720AD88092 /* LibraryRow.swift */; };
+		BC8EB2C170982F82017365EA /* ReadBoardUI in Frameworks */ = {isa = PBXBuildFile; productRef = C2C60BA8116BFA055AB222F1 /* ReadBoardUI */; };
+		C7FA4AE21A3E469FAFC0A0CA /* GoDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */; };
+		D51C9C7497BCEB1939967950 /* ReadBoardFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 4A6CF18ECA6B56187C6AC449 /* ReadBoardFeatures */; };
 		D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */; };
+		DB0FF59F7F62C3FF88FE7917 /* GoDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */; };
+		FC184698CC06419486B7BA0C /* GoNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4656E831611662EC3FB4DF /* GoNavigation.swift */; };
 		FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
+		FF122B6ABBC6037FB449A889 /* GoNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4656E831611662EC3FB4DF /* GoNavigation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ReadBoardGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0BFFA1B3192D0547CC8A1C60 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoSettingsView.swift; sourceTree = "<group>"; };
-		2F27B1E95756E0720AD88092 /* LibraryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryRow.swift; sourceTree = "<group>"; };
+		20800D82303E54CFFE471683 /* readboard */ = {isa = PBXFileReference; lastKnownFileType = folder; name = readboard; path = ../readboard; sourceTree = SOURCE_ROOT; };
 		3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
-		3C767767F38F99F906683F77 /* ArticleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleDetailView.swift; sourceTree = "<group>"; };
 		3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBoardGoMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoDesignSystem.swift; sourceTree = "<group>"; };
+		4A4656E831611662EC3FB4DF /* GoNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoNavigation.swift; sourceTree = "<group>"; };
 		65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		91254373EB036B19C1207030 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
 		96AF6499D545B04A0B18785F /* readboard-go */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "readboard-go"; path = .; sourceTree = SOURCE_ROOT; };
 		A3906F9F3F41EC6D1475D255 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		C669032EBD406F2941E3C8BC /* CoreSnapshotRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreSnapshotRootView.swift; sourceTree = "<group>"; };
 		F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBoardGoApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -56,6 +69,8 @@
 			files = (
 				9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */,
 				3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */,
+				24F0C2C97D268152FEE7EF39 /* ReadBoardUI in Frameworks */,
+				31560622FBD69BD27572D3AB /* ReadBoardFeatures in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,7 +79,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */,
-				A13ED6AD71111DA800FC3DE8 /* ReadBoardContract in Frameworks */,
+				A13ED6AD71111DA800FC3DE8 /* ReadBoardCoreSnapshot in Frameworks */,
+				2A9517AC8A7AA15C181A781B /* ReadBoardContract in Frameworks */,
+				4BE975CA57F9B5B83097F15A /* ReadBoardRemote in Frameworks */,
+				BC8EB2C170982F82017365EA /* ReadBoardUI in Frameworks */,
+				D51C9C7497BCEB1939967950 /* ReadBoardFeatures in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,24 +111,35 @@
 		69C2A83D21B3DB6556CDDED0 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
+				20800D82303E54CFFE471683 /* readboard */,
 				96AF6499D545B04A0B18785F /* readboard-go */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		91079D9CA9DAADE5DE5A837C /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
 		FAE60E71606E1AA6470C73C2 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				3C767767F38F99F906683F77 /* ArticleDetailView.swift */,
+				7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */,
 				3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */,
+				C669032EBD406F2941E3C8BC /* CoreSnapshotRootView.swift */,
+				4A4656E831611662EC3FB4DF /* GoNavigation.swift */,
 				0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */,
-				2F27B1E95756E0720AD88092 /* LibraryRow.swift */,
 				6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */,
 				A3906F9F3F41EC6D1475D255 /* MainTabView.swift */,
 				91254373EB036B19C1207030 /* OperationsView.swift */,
 				F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */,
 				0BFFA1B3192D0547CC8A1C60 /* RootView.swift */,
 				65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */,
+				91079D9CA9DAADE5DE5A837C /* Design */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -122,7 +152,9 @@
 			buildConfigurationList = 026A3A9BA9838A3264B25B21 /* Build configuration list for PBXNativeTarget "ReadBoardGoMac" */;
 			buildPhases = (
 				C7BC491CD4B071C35FA7CD1E /* Sources */,
+				41C5B8DC0A0EE1B9244AB21D /* Resources */,
 				CAB31DE664108876AB1C0120 /* Frameworks */,
+				BF6D0B6EEA18EF104F97CAD4 /* Package Icon Variants */,
 			);
 			buildRules = (
 			);
@@ -131,7 +163,11 @@
 			name = ReadBoardGoMac;
 			packageProductDependencies = (
 				0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */,
+				722E3547B2A5B90DB278F2A4 /* ReadBoardCoreSnapshot */,
 				5F358149DD97900A485D2CDF /* ReadBoardContract */,
+				B7C08971FD535DFFB6007675 /* ReadBoardRemote */,
+				C2C60BA8116BFA055AB222F1 /* ReadBoardUI */,
+				4A6CF18ECA6B56187C6AC449 /* ReadBoardFeatures */,
 			);
 			productName = ReadBoardGoMac;
 			productReference = 3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */;
@@ -142,6 +178,7 @@
 			buildConfigurationList = 6885C25D637A26F2F4A909AB /* Build configuration list for PBXNativeTarget "ReadBoardGo" */;
 			buildPhases = (
 				3EE46510BA3D0AE9D0CDF68E /* Sources */,
+				E410CE078A9CF7EFEE9A5259 /* Resources */,
 				74497EAD6D2698789AEC08F8 /* Frameworks */,
 			);
 			buildRules = (
@@ -152,6 +189,8 @@
 			packageProductDependencies = (
 				0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */,
 				BE07D790CD04394F5E4C0677 /* ReadBoardContract */,
+				EBFCAD4A35F0BD739331A6B7 /* ReadBoardUI */,
+				FB5AF445B1AC029341A4AA6B /* ReadBoardFeatures */,
 			);
 			productName = ReadBoardGo;
 			productReference = 031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */;
@@ -184,7 +223,7 @@
 			mainGroup = 4BE1390E3C85113D992A1C03;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */,
+				EDF27EF02DA7953C5001F8F3 /* XCLocalSwiftPackageReference "../readboard" */,
 				C9C19F5493C25DE67ED7CAF7 /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -198,15 +237,59 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		41C5B8DC0A0EE1B9244AB21D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C83473A49D2A293B76C0FBC /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E410CE078A9CF7EFEE9A5259 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A4CFAECBCB7F959A4A1DC5D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		BF6D0B6EEA18EF104F97CAD4 /* Package Icon Variants */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Package Icon Variants";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIconLight.icns",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIconDark.icns",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"$SRCROOT/script/package_icon_variants.sh\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		3EE46510BA3D0AE9D0CDF68E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A229BD85A3AD596226F6C0A4 /* ArticleDetailView.swift in Sources */,
 				0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */,
+				A173014C048EEF638E19F954 /* CoreSnapshotRootView.swift in Sources */,
+				C7FA4AE21A3E469FAFC0A0CA /* GoDesignSystem.swift in Sources */,
+				FF122B6ABBC6037FB449A889 /* GoNavigation.swift in Sources */,
 				A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */,
-				C11D62169BE8003551F47196 /* LibraryRow.swift in Sources */,
 				A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */,
 				44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */,
 				274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */,
@@ -220,10 +303,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				32563781689AAC6EE3E5243A /* ArticleDetailView.swift in Sources */,
 				FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */,
+				9B928C1788908672F3FB6673 /* CoreSnapshotRootView.swift in Sources */,
+				DB0FF59F7F62C3FF88FE7917 /* GoDesignSystem.swift in Sources */,
+				FC184698CC06419486B7BA0C /* GoNavigation.swift in Sources */,
 				592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */,
-				A4EC1E9CE60CF2D76163B64F /* LibraryRow.swift in Sources */,
 				1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */,
 				0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */,
 				9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */,
@@ -466,18 +550,11 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = .;
 		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/liuhangbj/ReadBoard.git";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
+		EDF27EF02DA7953C5001F8F3 /* XCLocalSwiftPackageReference "../readboard" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../readboard;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */ = {
@@ -488,15 +565,37 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ReadBoardGoCore;
 		};
+		4A6CF18ECA6B56187C6AC449 /* ReadBoardFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardFeatures;
+		};
 		5F358149DD97900A485D2CDF /* ReadBoardContract */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */;
 			productName = ReadBoardContract;
+		};
+		722E3547B2A5B90DB278F2A4 /* ReadBoardCoreSnapshot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardCoreSnapshot;
+		};
+		B7C08971FD535DFFB6007675 /* ReadBoardRemote */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardRemote;
 		};
 		BE07D790CD04394F5E4C0677 /* ReadBoardContract */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 8661DCE79172EA5CE6FAF528 /* XCRemoteSwiftPackageReference "ReadBoard" */;
 			productName = ReadBoardContract;
+		};
+		C2C60BA8116BFA055AB222F1 /* ReadBoardUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardUI;
+		};
+		EBFCAD4A35F0BD739331A6B7 /* ReadBoardUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardUI;
+		};
+		FB5AF445B1AC029341A4AA6B /* ReadBoardFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReadBoardFeatures;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
