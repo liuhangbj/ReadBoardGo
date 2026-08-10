@@ -30,6 +30,10 @@ macOS 本地构建并启动：
 ./script/build_and_run.sh --verify
 ```
 
-当前依赖 ReadBoard 的 `main` 分支。服务端发布首个稳定 API tag 后，应改为固定的语义版本依赖。
+当前通过 `CoreVersion.env` 锁定一个不可漂移的 ReadBoard Core 提交。更新共享内核时，
+先修改该文件，再执行 `./script/update_core_ref.sh <commit>`；脚本会同步 SwiftPM、
+XcodeGen 与已提交的 Xcode 工程。命令行联合开发可显式设置
+`READBOARD_CORE_PATH=../readboard` 使用本地 Core；普通构建、干净克隆与 CI 使用
+锁定的远程提交。
 
 所有连接均使用 HTTPS，并固定首次信任的服务器证书。当前自签名证书适合可信局域网；直接公网访问仍应配合正式域名证书或安全隧道。
