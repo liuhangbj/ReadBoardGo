@@ -1,18 +1,101 @@
 import ReadBoardContract
-import ReadBoardCoreSnapshot
+import ReadBoardFeatures
 import ReadBoardGoCore
 import SwiftUI
 
 struct GoCombinedSettingsView: View {
   @Environment(ReadBoardGoSession.self) private var session
+  @StateObject private var navigation = ReadBoardSettingsNavigationStore.shared
 
   var body: some View {
-    if let services = try? GoRemoteServicesFactory.make(session: session) {
-      ReadBoardCoreSnapshot.SettingsView(
-        services: services,
-        connectionView: AnyView(GoSettingsView()))
+    if let environment = try? session.featureEnvironment() {
+      ReadBoardSettingsShell(
+        pages: availablePages(environment),
+        primaryItem: ReadBoardSettingsModuleDescriptor(
+          id: Self.connectionID,
+          title: "连接",
+          icon: "server.rack"),
+        route: navigation.route
+      ) { destination in
+        content(destination, environment: environment)
+      }
+      .tint(Color.goAccent)
     } else {
       GoSettingsView()
+    }
+  }
+
+  private static let connectionID = "readboard.go.connection"
+
+  private func content(
+    _ destination: ReadBoardSettingsDestination,
+    environment: ReadBoardFeatureEnvironment
+  ) -> AnyView {
+    switch destination {
+    case .module(let identifier):
+      if identifier == Self.connectionID { return AnyView(GoSettingsView()) }
+      return AnyView(ContentUnavailableView("模块不可用", systemImage: "exclamationmark.triangle"))
+    case .page(let page):
+      return switch page {
+      case .general: AnyView(ReadBoardGeneralSettingsPane(
+        sourceManagement: environment.sourceManagement,
+        configuration: environment.configuration))
+      case .remote: AnyView(ContentUnavailableView(
+        "仅能在服务端设置远程访问", systemImage: "server.rack"))
+      case .reader: AnyView(ReadBoardReaderSettingsPane())
+      case .llm: AnyView(ReadBoardLLMSettingsPane(
+        configuration: environment.configuration))
+      case .deps: AnyView(ReadBoardDependencySettingsPane(
+        configuration: environment.configuration,
+        dependencyManagement: environment.dependencyManagement,
+        allowsServerPathEditing: false))
+      case .boards: AnyView(ReadBoardFeatureBoardSettingsPane(
+        configuration: environment.configuration))
+      case .sources: AnyView(ReadBoardPlatformSettingsPane(
+        sourceCatalog: environment.sourceCatalog,
+        authentication: environment.authentication,
+        configuration: environment.configuration,
+        permissions: environment.permissions))
+      case .fetch: AnyView(ReadBoardFulltextSettingsPane(
+        configuration: environment.configuration))
+      case .content: AnyView(ReadBoardAIContentSettingsPane(
+        configuration: environment.configuration))
+      case .export: AnyView(ReadBoardExportPlatformSettingsPane(
+        configuration: environment.configuration,
+        allowsServerPathEditing: false))
+      case .pipeline: AnyView(ReadBoardExportRulesSettingsPane(
+        export: environment.export,
+        sourceCatalog: environment.sourceCatalog,
+        configuration: environment.configuration))
+      case .cleanup: AnyView(ReadBoardMaintenanceSettingsPane(
+        maintenance: environment.maintenance))
+      }
+    }
+  }
+
+  private func availablePages(_ environment: ReadBoardFeatureEnvironment) -> [ReadBoardSettingsPage] {
+    ReadBoardSettingsPage.allCases.filter { page in
+      switch page {
+      case .reader:
+        true
+      case .remote:
+        false
+      case .general:
+        environment.permissions.allows(.manageConfiguration, capability: .configuration)
+          && environment.permissions.allows(.manageSources, capability: .sourceManagement)
+      case .llm, .deps, .boards, .fetch, .content, .export:
+        environment.permissions.allows(.manageConfiguration, capability: .configuration)
+      case .sources:
+        environment.permissions.allows(.manageSources, capability: .sourceManagement)
+          || environment.permissions.allows(.manageAuthentication, capability: .authentication)
+      case .pipeline:
+        environment.permissions.allows(.manageExports, capability: .export)
+          && environment.permissions.allows(.manageConfiguration, capability: .configuration)
+          && environment.permissions.allows(.manageSources, capability: .sourceManagement)
+      case .cleanup:
+        environment.permissions.allows(.manageMaintenance, capability: .maintenance)
+          && environment.permissions.allows(.manageOperations, capability: .administration)
+      }
     }
   }
 }

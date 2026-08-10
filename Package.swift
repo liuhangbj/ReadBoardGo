@@ -3,45 +3,25 @@ import Foundation
 import PackageDescription
 
 let configuredCorePath = ProcessInfo.processInfo.environment["READBOARD_CORE_PATH"]
-    ?? "../readboard"
-let hasLocalCore = FileManager.default.fileExists(
-    atPath: URL(fileURLWithPath: configuredCorePath)
-        .appendingPathComponent("Package.swift").path)
+let coreRevision = ProcessInfo.processInfo.environment["READBOARD_CORE_REF"]
+    ?? "e79e1695ce3980e05c764b57fabaf499a79a7ead"
+let hasLocalCore = configuredCorePath.map { path in
+    FileManager.default.fileExists(
+        atPath: URL(fileURLWithPath: path)
+            .appendingPathComponent("Package.swift").path)
+} ?? false
 let readBoardDependency: Package.Dependency = hasLocalCore
-    ? .package(path: configuredCorePath)
-    : .package(url: "https://github.com/liuhangbj/ReadBoard.git", branch: "main")
+    ? .package(path: configuredCorePath!)
+    : .package(url: "https://github.com/liuhangbj/ReadBoard.git", revision: coreRevision)
 
 let package = Package(
     name: "ReadBoardGo",
     platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "ReadBoardGoCore", targets: ["ReadBoardGoCore"]),
-        .library(name: "ReadBoardSharedUI", targets: ["ReadBoardSharedUI"]),
-        .library(name: "ReadBoardCoreSnapshot", targets: ["ReadBoardCoreSnapshot"]),
     ],
     dependencies: [readBoardDependency],
     targets: [
-        .target(
-            name: "ReadBoardCoreSnapshot",
-            dependencies: [
-                .product(name: "ReadBoardContract", package: "ReadBoard"),
-                .product(name: "ReadBoardUI", package: "ReadBoard"),
-                .product(name: "ReadBoardFeatures", package: "ReadBoard"),
-                "ReadBoardSharedUI",
-            ],
-            path: "CoreSnapshot/Sources/ReadBoardCoreSnapshot",
-            resources: [
-                .copy("Resources/migrations"),
-                .copy("Resources/engine"),
-            ]
-        ),
-        .target(
-            name: "ReadBoardSharedUI",
-            dependencies: [
-                .product(name: "ReadBoardContract", package: "ReadBoard"),
-                .product(name: "ReadBoardUI", package: "ReadBoard"),
-            ]
-        ),
         .target(
             name: "ReadBoardGoCore",
             dependencies: [
@@ -57,10 +37,6 @@ let package = Package(
                 "ReadBoardGoCore",
                 .product(name: "ReadBoardRemote", package: "ReadBoard"),
             ]
-        ),
-        .testTarget(
-            name: "ReadBoardSharedUITests",
-            dependencies: ["ReadBoardSharedUI"]
         ),
     ]
 )

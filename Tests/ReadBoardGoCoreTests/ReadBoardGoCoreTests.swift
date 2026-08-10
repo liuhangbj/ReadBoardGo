@@ -135,6 +135,79 @@ final class ReadBoardGoCoreTests: XCTestCase {
         XCTAssertNil(try store.load())
     }
 
+    func testOfflineCachePersistsLastKnownProfileSnapshotAndDetail() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "readboard-go-offline-cache-test-\(UUID().uuidString)",
+            isDirectory: true)
+        let file = directory.appendingPathComponent("offline-cache.json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let profile = RemoteServerProfile(
+            apiVersion: "1",
+            serverName: "ReadBoard Pro",
+            capabilities: [.library, .mediaPlayback],
+            grantedScopes: RemoteAccessScope.reader,
+            transportSecurity: "tls")
+        let counts = LibraryCountsSnapshot(
+            total: 2, unread: 1,
+            pending: 0, pendingUnread: 0,
+            exported: 0, exportedUnread: 0,
+            articles: 2, articleUnread: 1,
+            podcasts: 0, podcastUnread: 0,
+            videos: 0, videoUnread: 0)
+        let snapshot = LibrarySnapshot(nodes: [], counts: counts)
+        let detail = ContentDetail(
+            id: 42,
+            contentMarkdown: "正文",
+            translatedMarkdown: "译文",
+            transcriptMarkdown: nil,
+            translatedTitle: "标题",
+            audioURL: nil,
+            videoID: nil,
+            score: 8,
+            summary: "摘要")
+
+        let cache = ReadBoardGoOfflineCache(fileURL: file)
+        await cache.storeProfile(profile)
+        await cache.storeLibrarySnapshot(snapshot)
+        await cache.storeDetail(detail)
+
+        let restored = ReadBoardGoOfflineCache(fileURL: file)
+        let restoredProfile = await restored.profile()
+        let restoredSnapshot = await restored.librarySnapshot()
+        let restoredDetail = await restored.detail(contentID: 42)
+        let restoredStatus = await restored.status()
+        XCTAssertEqual(restoredProfile, profile)
+        XCTAssertEqual(restoredSnapshot, snapshot)
+        XCTAssertEqual(restoredDetail, detail)
+        XCTAssertNotNil(restoredStatus.updatedAt)
+    }
+
+    func testOfflineCacheDoesNotCrossServerBoundary() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = directory.appendingPathComponent("offline-cache.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let cache = ReadBoardGoOfflineCache(fileURL: fileURL)
+        await cache.activate(serverKey: "https://server-a|fingerprint-a")
+        let emptyCounts = LibraryCountsSnapshot(
+            total: 0, unread: 0, pending: 0, pendingUnread: 0,
+            exported: 0, exportedUnread: 0, articles: 0, articleUnread: 0,
+            podcasts: 0, podcastUnread: 0, videos: 0, videoUnread: 0)
+        await cache.storeLibrarySnapshot(LibrarySnapshot(nodes: [], counts: emptyCounts))
+        let firstLibrary = await cache.librarySnapshot()
+        XCTAssertNotNil(firstLibrary)
+
+        await cache.activate(serverKey: "https://server-b|fingerprint-b")
+        let switchedLibrary = await cache.librarySnapshot()
+        let switchedProfile = await cache.profile()
+        let switchedStatus = await cache.status()
+        XCTAssertNil(switchedLibrary)
+        XCTAssertNil(switchedProfile)
+        XCTAssertEqual(switchedStatus.pendingReadingMutations, 0)
+    }
+
     func testLiveTLSCertificatePinningWhenEnabled() async throws {
         guard let raw = ProcessInfo.processInfo.environment["READBOARD_GO_LIVE_SERVER"],
               let baseURL = URL(string: raw) else {

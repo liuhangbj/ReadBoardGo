@@ -1,0 +1,14 @@
+{
+  "originHash" : "fec2a3d19f8a7fb19a45dbd95dea955438b48b5d9f7bf09488c4b4c7ea829595",
+  "pins" : [
+    {
+      "identity" : "readboard",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/liuhangbj/ReadBoard.git",
+      "state" : {
+        "revision" : "e79e1695ce3980e05c764b57fabaf499a79a7ead"
+      }
+    }
+  ],
+  "version" : 3
+}

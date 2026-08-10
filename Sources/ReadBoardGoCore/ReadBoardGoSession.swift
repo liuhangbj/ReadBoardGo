@@ -13,13 +13,20 @@ public final class ReadBoardGoSession {
     public private(set) var isRestoringConnection = false
     public private(set) var errorMessage: String?
     public private(set) var trustCandidate: ServerTrustCandidate?
+    public private(set) var isOffline = false
+    public private(set) var cachedAt: Date?
     public let discovery = ReadBoardDiscovery()
     public let remoteHealth = ReadBoardRemoteHealthStore()
 
     private let store: any ConnectionStoring
+    private let offlineCache: ReadBoardGoOfflineCache
 
-    public init(store: any ConnectionStoring = DefaultConnectionStore()) {
+    public init(
+        store: any ConnectionStoring = DefaultConnectionStore(),
+        offlineCache: ReadBoardGoOfflineCache = ReadBoardGoOfflineCache()
+    ) {
         self.store = store
+        self.offlineCache = offlineCache
         do {
             let stored = try store.load()
             if let stored, stored.baseURL.scheme == "https",
@@ -106,6 +113,9 @@ public final class ReadBoardGoSession {
             try store.save(value)
             connection = value
             self.profile = profile
+            await offlineCache.activate(serverKey: cacheServerKey(value))
+            await offlineCache.storeProfile(profile)
+            isOffline = false
             self.trustCandidate = nil
             discovery.stop()
         } catch is CancellationError {
@@ -140,6 +150,9 @@ public final class ReadBoardGoSession {
             try store.save(value)
             connection = value
             self.profile = profile
+            await offlineCache.activate(serverKey: cacheServerKey(value))
+            await offlineCache.storeProfile(profile)
+            isOffline = false
             self.trustCandidate = nil
             discovery.stop()
         } catch is CancellationError {
@@ -149,14 +162,19 @@ public final class ReadBoardGoSession {
         }
     }
 
-    public func refreshProfile() async {
+    public func refreshProfile(showProgress: Bool = true) async {
         guard let connection else { return }
-        isRestoringConnection = true
-        defer { isRestoringConnection = false }
+        await offlineCache.activate(serverKey: cacheServerKey(connection))
+        if showProgress { isRestoringConnection = true }
+        defer { if showProgress { isRestoringConnection = false } }
         do {
             let loaded = try await client(for: connection).profile()
             try validateAPIVersion(loaded.apiVersion)
             profile = loaded
+            await offlineCache.storeProfile(loaded)
+            let cacheStatus = await offlineCache.status()
+            cachedAt = cacheStatus.updatedAt
+            isOffline = false
             remoteHealth.reset()
             let upgraded = StoredServerConnection(
                 copying: connection,
@@ -165,7 +183,11 @@ public final class ReadBoardGoSession {
             self.connection = upgraded
             errorMessage = nil
         } catch {
-            profile = nil
+            let cachedProfile = await offlineCache.profile()
+            profile = cachedProfile
+            let cacheStatus = await offlineCache.status()
+            cachedAt = cacheStatus.updatedAt
+            isOffline = cachedProfile != nil
             if let connectionError = error as? ReadBoardGoConnectionError,
                case .apiVersionMismatch = connectionError {
                 try? store.delete()
@@ -179,25 +201,44 @@ public final class ReadBoardGoSession {
         }
     }
 
+    /// 断连后保持阅读界面，并以退避间隔在后台恢复服务连接。
+    public func monitorConnection() async {
+        var retryDelay = 5
+        while !Task.isCancelled, connection != nil {
+            if isOffline {
+                try? await Task.sleep(for: .seconds(retryDelay))
+                guard !Task.isCancelled else { return }
+                await refreshProfile(showProgress: false)
+                retryDelay = isOffline ? min(retryDelay * 2, 30) : 5
+            } else {
+                retryDelay = 5
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+    }
+
     public func disconnect() {
         do { try store.delete() } catch { errorMessage = error.localizedDescription }
         connection = nil
         profile = nil
         trustCandidate = nil
         isRestoringConnection = false
+        isOffline = false
+        cachedAt = nil
         remoteHealth.reset()
     }
 
     public func libraryPage(_ query: ContentQuery = ContentQuery()) async throws -> ContentPage {
-        try await RemoteLibraryGateway(client: try client()).page(query)
+        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache).page(query)
     }
 
     public func librarySnapshot() async throws -> LibrarySnapshot {
-        try await RemoteLibraryGateway(client: try client()).snapshot()
+        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache).snapshot()
     }
 
     public func contentDetail(id: Int64) async throws -> ContentDetail {
-        try await RemoteContentDetailGateway(client: try client()).detail(contentID: id)
+        try await CachedRemoteContentDetailGateway(client: try client(), cache: offlineCache)
+            .detail(contentID: id)
     }
 
     public func youtubeStream(videoID: String) async throws -> MediaPlaybackSource {
@@ -206,16 +247,17 @@ public final class ReadBoardGoSession {
     }
 
     public func setRead(id: Int64, value: Bool) async throws -> ContentState {
-        try await RemoteLibraryGateway(client: try client()).setRead(contentID: id, isRead: value)
+        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache)
+            .setRead(contentID: id, isRead: value)
     }
 
     public func setStarred(id: Int64, value: Bool) async throws -> ContentState {
-        try await RemoteLibraryGateway(client: try client())
+        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache)
             .setStarred(contentID: id, isStarred: value)
     }
 
     public func sourceCatalog() async throws -> SourceCatalogSnapshot {
-        try await RemoteSourceCatalogGateway(client: try client()).snapshot()
+        try await CachedRemoteSourceCatalogGateway(client: try client(), cache: offlineCache).snapshot()
     }
 
     public func runtimeStatus() async -> RuntimeStatusSnapshot {
@@ -237,12 +279,12 @@ public final class ReadBoardGoSession {
     public func featureEnvironment() throws -> ReadBoardFeatureEnvironment {
         let client = try client()
         return ReadBoardFeatureEnvironment(
-            library: RemoteLibraryGateway(client: client),
-            contentDetail: RemoteContentDetailGateway(client: client),
+            library: CachedRemoteLibraryGateway(client: client, cache: offlineCache),
+            contentDetail: CachedRemoteContentDetailGateway(client: client, cache: offlineCache),
             mediaPlayback: RemoteMediaPlaybackGateway(client: client),
             processing: RemoteProcessingGateway(client: client),
             sourceManagement: RemoteSourceManagementGateway(client: client),
-            sourceCatalog: RemoteSourceCatalogGateway(client: client),
+            sourceCatalog: CachedRemoteSourceCatalogGateway(client: client, cache: offlineCache),
             sourceOnboarding: RemoteSourceOnboardingGateway(client: client),
             runtimeStatus: RemoteRuntimeStatusGateway(client: client),
             export: RemoteExportGateway(client: client),
@@ -251,6 +293,7 @@ public final class ReadBoardGoSession {
             authentication: RemoteAuthenticationGateway(client: client),
             maintenance: RemoteMaintenanceGateway(client: client),
             dependencyManagement: RemoteDependencyManagementGateway(client: client),
+            dataRevision: RemoteDataRevisionGateway(client: client),
             permissions: ReadBoardFeaturePermissions(
                 capabilities: profile?.capabilities ?? [],
                 scopes: profile?.grantedScopes ?? connection?.scopes ?? []))
@@ -272,9 +315,15 @@ public final class ReadBoardGoSession {
         return ReadBoardHTTPClient(baseURL: connection.baseURL,
             bearerToken: connection.token,
             session: PinnedHTTPS.session(certificateFingerprint: fingerprint),
-            eventHandler: { [weak remoteHealth] event in
+            eventHandler: { [weak remoteHealth, weak self] event in
                 Task { @MainActor in
                     remoteHealth?.receive(event)
+                    switch event {
+                    case .succeeded:
+                        self?.isOffline = false
+                    case .failed(_, let kind, _):
+                        if kind == .transport { self?.isOffline = true }
+                    }
                 }
             })
     }
@@ -285,5 +334,10 @@ public final class ReadBoardGoSession {
                 client: ReadBoardRemoteAPI.version,
                 server: serverVersion)
         }
+    }
+
+    private func cacheServerKey(_ connection: StoredServerConnection) -> String {
+        let base = connection.baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return "\(base)|\(connection.certificateFingerprint ?? "untrusted")"
     }
 }

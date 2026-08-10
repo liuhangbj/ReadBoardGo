@@ -24,7 +24,7 @@ struct RootView: View {
     .tint(Color.goAccent)
     .overlay(alignment: .top) {
       if session.isConnected, let message = session.remoteHealth.message {
-        remoteHealthBanner(message)
+        remoteHealthBanner(session.isOffline ? offlineMessage(fallback: message) : message)
           .padding(.top, 10)
           .padding(.horizontal, 16)
       }
@@ -36,7 +36,15 @@ struct RootView: View {
       if session.connection != nil && session.profile == nil {
         await session.refreshProfile()
       }
+      await session.monitorConnection()
     }
+  }
+
+  private func offlineMessage(fallback: String) -> String {
+    guard let cachedAt = session.cachedAt else {
+      return "已断开连接，正在使用本机最后保存的内容"
+    }
+    return "离线只读 · 数据更新于 \(cachedAt.formatted(date: .abbreviated, time: .shortened))"
   }
 
   private func remoteHealthBanner(_ message: String) -> some View {

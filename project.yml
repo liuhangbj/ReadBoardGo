@@ -6,7 +6,8 @@ packages:
   ReadBoardGoCore:
     path: .
   ReadBoard:
-    path: ../readboard
+    url: https://github.com/liuhangbj/ReadBoard.git
+    revision: e79e1695ce3980e05c764b57fabaf499a79a7ead
 targets:
   ReadBoardGo:
     type: application
@@ -46,8 +47,6 @@ targets:
     dependencies:
       - package: ReadBoardGoCore
         product: ReadBoardGoCore
-      - package: ReadBoardGoCore
-        product: ReadBoardCoreSnapshot
       - package: ReadBoard
         product: ReadBoardContract
       - package: ReadBoard

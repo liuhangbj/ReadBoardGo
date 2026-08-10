@@ -25,8 +25,23 @@ struct MainTabView: View {
 
 #if os(macOS)
   private struct DesktopMainView: View {
+    @Environment(ReadBoardGoSession.self) private var session
+
     var body: some View {
-      CoreSnapshotRootView()
+      if let environment = try? session.featureEnvironment() {
+        ReadBoardDesktopMainFeatureView(
+          environment: environment,
+          settingsTitle: "设置",
+          settingsIcon: "gearshape"
+        ) {
+          GoCombinedSettingsView()
+        }
+      } else {
+        ReadBoardLibraryEmptyState(
+          title: "尚未连接服务端",
+          message: "请先完成 ReadBoard 服务连接。",
+          icon: "network.slash")
+      }
     }
   }
 #endif
