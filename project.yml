@@ -7,7 +7,7 @@ packages:
     path: .
   ReadBoard:
     url: https://github.com/liuhangbj/ReadBoard.git
-    branch: main
+    revision: e79e1695ce3980e05c764b57fabaf499a79a7ead
 targets:
   ReadBoardGo:
     type: application
@@ -23,6 +23,10 @@ targets:
         product: ReadBoardGoCore
       - package: ReadBoard
         product: ReadBoardContract
+      - package: ReadBoard
+        product: ReadBoardUI
+      - package: ReadBoard
+        product: ReadBoardFeatures
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo
@@ -45,6 +49,12 @@ targets:
         product: ReadBoardGoCore
       - package: ReadBoard
         product: ReadBoardContract
+      - package: ReadBoard
+        product: ReadBoardRemote
+      - package: ReadBoard
+        product: ReadBoardUI
+      - package: ReadBoard
+        product: ReadBoardFeatures
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo.mac
@@ -52,6 +62,14 @@ targets:
         SWIFT_VERSION: "6.0"
         INFOPLIST_FILE: App/Info-macOS.plist
         CODE_SIGN_STYLE: Automatic
+    postBuildScripts:
+      - name: Package Icon Variants
+        script: |
+          "$SRCROOT/script/package_icon_variants.sh" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIconLight.icns
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIconDark.icns
+        basedOnDependencyAnalysis: false
 schemes:
   ReadBoardGo:
     build:

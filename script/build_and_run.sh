@@ -8,7 +8,23 @@ BUNDLE_ID="com.hangbits.ReadBoardGo.mac"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="$PROJECT_ROOT/DerivedData/Run"
 APP_BUNDLE="$DERIVED_DATA/Build/Products/Debug/$APP_NAME.app"
-APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+OUTPUT_DIR="${READBOARD_OUTPUT_DIR:-$HOME/Applications}"
+INSTALLED_APP="$OUTPUT_DIR/$APP_NAME.app"
+APP_BINARY="$INSTALLED_APP/Contents/MacOS/$APP_NAME"
+ICON_APPEARANCE="${READBOARD_ICON_APPEARANCE:-auto}"
+
+if [ "$ICON_APPEARANCE" = "auto" ]; then
+  if defaults read -g AppleInterfaceStyle 2>/dev/null | grep -q '^Dark$'; then
+    ICON_APPEARANCE="dark"
+  else
+    ICON_APPEARANCE="light"
+  fi
+fi
+case "$ICON_APPEARANCE" in
+  light) APP_ICON_NAME="AppIcon" ;;
+  dark) APP_ICON_NAME="AppIconDark" ;;
+  *) echo "READBOARD_ICON_APPEARANCE must be auto, light, or dark" >&2; exit 2 ;;
+esac
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
@@ -17,11 +33,26 @@ xcodebuild \
   -scheme ReadBoardGoMac \
   -destination "platform=macOS" \
   -derivedDataPath "$DERIVED_DATA" \
+  ASSETCATALOG_COMPILER_APPICON_NAME="$APP_ICON_NAME" \
   CODE_SIGNING_ALLOWED=NO \
   build
 
+install_app() {
+  local staging_root
+  staging_root="$(mktemp -d "${TMPDIR:-/tmp}/readboard-go-install.XXXXXX")"
+  mkdir -p "$OUTPUT_DIR"
+  ditto "$APP_BUNDLE" "$staging_root/$APP_NAME.app"
+  if [ -e "$INSTALLED_APP" ]; then
+    mv "$INSTALLED_APP" "$staging_root/previous.app"
+  fi
+  mv "$staging_root/$APP_NAME.app" "$INSTALLED_APP"
+  rm -rf "$staging_root"
+}
+
+install_app
+
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE"
+  /usr/bin/open -n "$INSTALLED_APP"
 }
 
 case "$MODE" in

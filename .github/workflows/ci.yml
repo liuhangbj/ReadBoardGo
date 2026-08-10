@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Verify pinned Core revision
+        run: script/verify_core_ref.sh
+
+      - name: Test remote client package
+        env:
+          READBOARD_CORE_PATH: ${{ runner.temp }}/no-local-core
+        run: swift test
+
+      - name: Build iOS release
+        run: |
+          xcodebuild -quiet \
+            -project ReadBoardGo.xcodeproj \
+            -scheme ReadBoardGo \
+            -configuration Release \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$RUNNER_TEMP/readboard-go-ios" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package universal macOS app
+        env:
+          READBOARD_OUTPUT_DIR: ${{ runner.temp }}/release
+          READBOARD_DERIVED_DATA: ${{ runner.temp }}/readboard-go-macos
+          READBOARD_VERSION: 0.1.0
+          READBOARD_BUILD_NUMBER: ${{ github.run_number }}
+        run: script/package_macos.sh
+
+      - name: Validate packaged app
+        run: |
+          APP="$RUNNER_TEMP/release/ReadBoard Go.app"
+          codesign --verify --deep --strict "$APP"
+          ARCHS="$(lipo -archs "$APP/Contents/MacOS/ReadBoard Go")"
+          [[ " $ARCHS " == *" arm64 "* && " $ARCHS " == *" x86_64 "* ]]

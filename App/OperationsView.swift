@@ -1,37 +1,20 @@
-import ReadBoardContract
+import ReadBoardFeatures
 import ReadBoardGoCore
+import ReadBoardUI
 import SwiftUI
 
+/// Go 只装配远程 gateway；运行状态与失败处理使用共享功能板块。
 struct OperationsView: View {
-    @Environment(ReadBoardGoSession.self) private var session
-    @State private var status = RuntimeStatusSnapshot()
-    @State private var authentications: [PlatformAuthenticationStatus] = []
+  @Environment(ReadBoardGoSession.self) private var session
 
-    var body: some View {
-        List {
-            Section("处理状态") {
-                LabeledContent("阶段", value: status.phase.rawValue)
-                LabeledContent("队列", value: "\(status.queue.items)")
-                LabeledContent("暂停错误", value: "\(status.pausedFailureCount)")
-                if !status.lastSummary.isEmpty { Text(status.lastSummary).foregroundStyle(.secondary) }
-            }
-            if session.hasScope(.manageAuthentication), !authentications.isEmpty {
-                Section("平台授权") {
-                    ForEach(authentications) { item in
-                        LabeledContent(item.displayName, value: item.phase.rawValue)
-                    }
-                }
-            }
-        }
-        .navigationTitle("运行状态")
-        .refreshable { await load() }
-        .task { await load() }
+  var body: some View {
+    if let environment = try? session.featureEnvironment() {
+      ReadBoardOperationsFeatureView(environment: environment)
+    } else {
+      ReadBoardLibraryEmptyState(
+        title: "尚未连接服务端",
+        message: "请先完成 ReadBoard 服务连接。",
+        icon: "network.slash")
     }
-
-    private func load() async {
-        async let runtime = session.runtimeStatus()
-        async let auth = session.authenticationStatuses()
-        status = await runtime
-        authentications = await auth
-    }
+  }
 }

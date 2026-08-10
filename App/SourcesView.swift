@@ -1,39 +1,20 @@
-import ReadBoardContract
+import ReadBoardFeatures
 import ReadBoardGoCore
+import ReadBoardUI
 import SwiftUI
 
+/// Go 只装配远程 gateway；订阅管理页面和 Core 共用 ReadBoardFeatures 实现。
 struct SourcesView: View {
-    @Environment(ReadBoardGoSession.self) private var session
-    @State private var snapshot: SourceCatalogSnapshot?
-    @State private var errorMessage: String?
+  @Environment(ReadBoardGoSession.self) private var session
 
-    var body: some View {
-        Group {
-            if let snapshot {
-                List(snapshot.sources) { source in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(source.name).font(.headline)
-                        Text("\(source.contentCount) 项 · \(source.enabled ? "已启用" : "已停用")")
-                            .font(.caption).foregroundStyle(.secondary)
-                        if let error = source.error, !error.isEmpty {
-                            Text(error).font(.caption).foregroundStyle(.red).lineLimit(2)
-                        }
-                    }
-                }
-                .refreshable { await load() }
-            } else if let errorMessage {
-                ContentUnavailableView("无法加载订阅源", systemImage: "wifi.exclamationmark",
-                                       description: Text(errorMessage))
-            } else {
-                ProgressView("正在加载订阅源…")
-            }
-        }
-        .navigationTitle("订阅源")
-        .task { await load() }
+  var body: some View {
+    if let environment = try? session.featureEnvironment() {
+      ReadBoardSourcesFeatureView(environment: environment)
+    } else {
+      ReadBoardLibraryEmptyState(
+        title: "尚未连接服务端",
+        message: "请先完成 ReadBoard 服务连接。",
+        icon: "network.slash")
     }
-
-    private func load() async {
-        do { snapshot = try await session.sourceCatalog(); errorMessage = nil }
-        catch { errorMessage = error.localizedDescription }
-    }
+  }
 }

@@ -1,36 +1,79 @@
 import ReadBoardContract
+import ReadBoardFeatures
 import ReadBoardGoCore
+import ReadBoardUI
 import SwiftUI
 
-private enum AppTab: Hashable {
-    case library, sources, operations, settings
+private enum MobileTab: Hashable {
+  case library
+  case sources
+  case operations
+  case settings
 }
 
 struct MainTabView: View {
+  @Environment(ReadBoardGoSession.self) private var session
+
+  var body: some View {
+    #if os(macOS)
+      DesktopMainView()
+    #else
+      MobileMainView()
+    #endif
+  }
+}
+
+#if os(macOS)
+  private struct DesktopMainView: View {
     @Environment(ReadBoardGoSession.self) private var session
-    @State private var selectedTab: AppTab = .library
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack { LibraryView() }
-                .tabItem { Label("阅读", systemImage: "books.vertical") }
-                .tag(AppTab.library)
-
-            if session.hasScope(.manageSources), session.hasCapability(.sourceManagement) {
-                NavigationStack { SourcesView() }
-                    .tabItem { Label("订阅源", systemImage: "dot.radiowaves.left.and.right") }
-                    .tag(AppTab.sources)
-            }
-
-            if session.hasScope(.manageOperations), session.hasCapability(.administration) {
-                NavigationStack { OperationsView() }
-                    .tabItem { Label("运行", systemImage: "gauge.with.dots.needle.67percent") }
-                    .tag(AppTab.operations)
-            }
-
-            NavigationStack { GoSettingsView() }
-                .tabItem { Label("设置", systemImage: "gearshape") }
-                .tag(AppTab.settings)
+      if let environment = try? session.featureEnvironment() {
+        ReadBoardDesktopMainFeatureView(
+          environment: environment,
+          settingsTitle: "设置",
+          settingsIcon: "gearshape"
+        ) {
+          GoCombinedSettingsView()
         }
+      } else {
+        ReadBoardLibraryEmptyState(
+          title: "尚未连接服务端",
+          message: "请先完成 ReadBoard 服务连接。",
+          icon: "network.slash")
+      }
     }
-}
+  }
+#endif
+
+#if os(iOS)
+  private struct MobileMainView: View {
+    @Environment(ReadBoardGoSession.self) private var session
+    @State private var selectedTab: MobileTab = .library
+
+    var body: some View {
+      TabView(selection: $selectedTab) {
+        NavigationStack { LibraryView() }
+          .tabItem { Label("阅读", systemImage: "books.vertical") }
+          .tag(MobileTab.library)
+
+        if session.hasScope(.manageSources), session.hasCapability(.sourceManagement) {
+          NavigationStack { SourcesView() }
+            .tabItem { Label("订阅源", systemImage: "dot.radiowaves.left.and.right") }
+            .tag(MobileTab.sources)
+        }
+
+        if session.hasScope(.manageOperations), session.hasCapability(.administration) {
+          NavigationStack { OperationsView() }
+            .tabItem { Label("运行", systemImage: "gauge.with.dots.needle.67percent") }
+            .tag(MobileTab.operations)
+        }
+
+        NavigationStack { GoSettingsView() }
+          .tabItem { Label("设置", systemImage: "network") }
+          .tag(MobileTab.settings)
+      }
+      .tint(Color.goAccent)
+    }
+  }
+#endif

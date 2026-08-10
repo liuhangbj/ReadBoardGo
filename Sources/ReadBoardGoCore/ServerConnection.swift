@@ -8,6 +8,7 @@ public struct StoredServerConnection: Codable, Equatable, Sendable {
     public let token: String
     public let scopes: [RemoteAccessScope]
     public let certificateFingerprint: String?
+    public let apiVersion: String?
 
     public init(baseURL: URL, credential: RemotePairingCredential,
                 certificateFingerprint: String) {
@@ -17,6 +18,17 @@ public struct StoredServerConnection: Codable, Equatable, Sendable {
         token = credential.token
         scopes = credential.scopes
         self.certificateFingerprint = certificateFingerprint
+        apiVersion = credential.apiVersion
+    }
+
+    public init(copying value: StoredServerConnection, apiVersion: String) {
+        baseURL = value.baseURL
+        deviceID = value.deviceID
+        deviceName = value.deviceName
+        token = value.token
+        scopes = value.scopes
+        certificateFingerprint = value.certificateFingerprint
+        self.apiVersion = apiVersion
     }
 }
 
@@ -39,6 +51,7 @@ public enum ReadBoardGoConnectionError: LocalizedError {
     case tlsRequired
     case certificateUnavailable
     case certificateNotTrusted
+    case apiVersionMismatch(client: String, server: String)
 
     public var errorDescription: String? {
         switch self {
@@ -48,6 +61,8 @@ public enum ReadBoardGoConnectionError: LocalizedError {
         case .tlsRequired: "ReadBoard Go 只允许通过 HTTPS 连接"
         case .certificateUnavailable: "无法读取服务器 TLS 证书"
         case .certificateNotTrusted: "服务器证书未受信任或已发生变化"
+        case .apiVersionMismatch(let client, let server):
+            "客户端接口版本为 \(client)，服务器接口版本为 \(server)，请升级 ReadBoard Go 或服务端"
         }
     }
 }
