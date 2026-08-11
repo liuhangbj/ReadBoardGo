@@ -3,10 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="ReadBoard Go"
-VERSION="${READBOARD_VERSION:-0.1.0}"
+VERSION="${READBOARD_VERSION:-0.9.4-beta.1}"
 VERSION="${VERSION#v}"
 BUILD_NUMBER="${READBOARD_BUILD_NUMBER:-1}"
 OUTPUT_DIR="${READBOARD_OUTPUT_DIR:-$ROOT_DIR/.artifacts/release}"
+ARCHIVE_PATH="${READBOARD_ARCHIVE_PATH:-}"
 DERIVED_DATA="${READBOARD_DERIVED_DATA:-$ROOT_DIR/DerivedData/Package}"
 BUILT_APP="$DERIVED_DATA/Build/Products/Release/$APP_NAME.app"
 INSTALLED_APP="$OUTPUT_DIR/$APP_NAME.app"
@@ -57,3 +58,11 @@ mv "$STAGED_APP" "$INSTALLED_APP"
 
 echo "ReadBoard Go app: $INSTALLED_APP"
 echo "Architectures: $ARCHITECTURES"
+
+if [ -n "$ARCHIVE_PATH" ]; then
+  mkdir -p "$(dirname "$ARCHIVE_PATH")"
+  TEMP_ARCHIVE="$STAGING_ROOT/$(basename "$ARCHIVE_PATH")"
+  ditto -c -k --sequesterRsrc --keepParent "$INSTALLED_APP" "$TEMP_ARCHIVE"
+  mv "$TEMP_ARCHIVE" "$ARCHIVE_PATH"
+  echo "ReadBoard Go archive: $ARCHIVE_PATH"
+fi
