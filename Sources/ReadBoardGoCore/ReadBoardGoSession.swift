@@ -228,53 +228,6 @@ public final class ReadBoardGoSession {
         remoteHealth.reset()
     }
 
-    public func libraryPage(_ query: ContentQuery = ContentQuery()) async throws -> ContentPage {
-        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache).page(query)
-    }
-
-    public func librarySnapshot() async throws -> LibrarySnapshot {
-        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache).snapshot()
-    }
-
-    public func contentDetail(id: Int64) async throws -> ContentDetail {
-        try await CachedRemoteContentDetailGateway(client: try client(), cache: offlineCache)
-            .detail(contentID: id)
-    }
-
-    public func youtubeStream(videoID: String) async throws -> MediaPlaybackSource {
-        try await RemoteMediaPlaybackGateway(client: try client())
-            .youtubeStream(videoID: videoID)
-    }
-
-    public func setRead(id: Int64, value: Bool) async throws -> ContentState {
-        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache)
-            .setRead(contentID: id, isRead: value)
-    }
-
-    public func setStarred(id: Int64, value: Bool) async throws -> ContentState {
-        try await CachedRemoteLibraryGateway(client: try client(), cache: offlineCache)
-            .setStarred(contentID: id, isStarred: value)
-    }
-
-    public func sourceCatalog() async throws -> SourceCatalogSnapshot {
-        try await CachedRemoteSourceCatalogGateway(client: try client(), cache: offlineCache).snapshot()
-    }
-
-    public func runtimeStatus() async -> RuntimeStatusSnapshot {
-        guard let client = try? client() else { return RuntimeStatusSnapshot() }
-        return await RemoteRuntimeStatusGateway(client: client).snapshot(refreshCounts: true)
-    }
-
-    public func runProcessingScan() async {
-        guard let client = try? client() else { return }
-        await RemoteRuntimeStatusGateway(client: client).runProcessingScan()
-    }
-
-    public func authenticationStatuses() async -> [PlatformAuthenticationStatus] {
-        guard let client = try? client() else { return [] }
-        return await RemoteAuthenticationGateway(client: client).statuses()
-    }
-
     /// Go 与 Core 共同页面的远程装配入口。共享页面无需知道 HTTP、证书或登录态细节。
     public func featureEnvironment() throws -> ReadBoardFeatureEnvironment {
         let client = try client()
@@ -297,12 +250,6 @@ public final class ReadBoardGoSession {
             permissions: ReadBoardFeaturePermissions(
                 capabilities: profile?.capabilities ?? [],
                 scopes: profile?.grantedScopes ?? connection?.scopes ?? []))
-    }
-
-    /// 完整 Core 前端快照装配远程 gateway 时使用。客户端仍由会话统一创建，
-    /// 证书固定、令牌和超时策略不会在 App 层重复实现。
-    public func remoteClient() throws -> ReadBoardHTTPClient {
-        try client()
     }
 
     private func client() throws -> ReadBoardHTTPClient {

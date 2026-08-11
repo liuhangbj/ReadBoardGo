@@ -35,9 +35,7 @@
 		C7FA4AE21A3E469FAFC0A0CA /* GoDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */; };
 		D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */; };
 		DB0FF59F7F62C3FF88FE7917 /* GoDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */; };
-		FC184698CC06419486B7BA0C /* GoNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4656E831611662EC3FB4DF /* GoNavigation.swift */; };
 		FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
-		FF122B6ABBC6037FB449A889 /* GoNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4656E831611662EC3FB4DF /* GoNavigation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,7 +45,6 @@
 		3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
 		3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBoardGoMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoDesignSystem.swift; sourceTree = "<group>"; };
-		4A4656E831611662EC3FB4DF /* GoNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoNavigation.swift; sourceTree = "<group>"; };
 		65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -123,7 +120,6 @@
 			children = (
 				7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */,
 				3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */,
-				4A4656E831611662EC3FB4DF /* GoNavigation.swift */,
 				0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */,
 				6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */,
 				A3906F9F3F41EC6D1475D255 /* MainTabView.swift */,
@@ -278,7 +274,6 @@
 			files = (
 				0FBA6C9D17EEB0DB5BC2CFC2 /* ConnectionView.swift in Sources */,
 				C7FA4AE21A3E469FAFC0A0CA /* GoDesignSystem.swift in Sources */,
-				FF122B6ABBC6037FB449A889 /* GoNavigation.swift in Sources */,
 				A40C3D011A808FF1CEF2275E /* GoSettingsView.swift in Sources */,
 				A3B1F134264E31FDF9104ECB /* LibraryView.swift in Sources */,
 				44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */,
@@ -295,7 +290,6 @@
 			files = (
 				FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */,
 				DB0FF59F7F62C3FF88FE7917 /* GoDesignSystem.swift in Sources */,
-				FC184698CC06419486B7BA0C /* GoNavigation.swift in Sources */,
 				592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */,
 				1D69D0DA6FF058C00EB056EC /* LibraryView.swift in Sources */,
 				0F7401FC61F9DE7D2598C287 /* MainTabView.swift in Sources */,
@@ -547,7 +541,7 @@
 			repositoryURL = "https://github.com/liuhangbj/ReadBoard.git";
 			requirement = {
 				kind = revision;
-				revision = 8817811ba515c38723555257b8cb0e5da1e66166;
+				revision = 0c48278786a9423c740487d72ae94126f7f859a5;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
