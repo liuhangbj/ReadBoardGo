@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="ReadBoard Go"
-VERSION="${READBOARD_VERSION:-0.9.4-beta.1}"
+VERSION="${READBOARD_VERSION:-0.9.4-beta.2}"
 VERSION="${VERSION#v}"
 BUILD_NUMBER="${READBOARD_BUILD_NUMBER:-1}"
 OUTPUT_DIR="${READBOARD_OUTPUT_DIR:-$ROOT_DIR/.artifacts/release}"

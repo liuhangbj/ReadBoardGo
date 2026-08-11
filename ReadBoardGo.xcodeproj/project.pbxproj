@@ -541,7 +541,7 @@
 			repositoryURL = "https://github.com/liuhangbj/ReadBoard.git";
 			requirement = {
 				kind = revision;
-				revision = e5b126bbeea4793abda05469d55883576cf17465;
+				revision = ccabbd9624b2073b1b24cb58b18500836a7e0f24;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

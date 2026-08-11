@@ -65,6 +65,10 @@ public struct KeychainConnectionStore: ConnectionStoring, Sendable {
             let context = LAContext()
             context.interactionNotAllowed = true
             query[kSecUseAuthenticationContext as String] = context
+            // Keep the legacy flag as a macOS Keychain ACL fallback. Some
+            // ad-hoc-signed builds ignore LAContext for old generic-password
+            // items and otherwise launch SecurityAgent during migration.
+            query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
         }
         return query
     }

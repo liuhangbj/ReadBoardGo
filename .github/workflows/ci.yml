@@ -45,7 +45,7 @@ jobs:
         env:
           READBOARD_OUTPUT_DIR: ${{ runner.temp }}/release
           READBOARD_DERIVED_DATA: ${{ runner.temp }}/readboard-go-macos
-          READBOARD_VERSION: 0.9.4-beta.1
+          READBOARD_VERSION: 0.9.4-beta.2
           READBOARD_BUILD_NUMBER: ${{ github.run_number }}
         run: script/package_macos.sh
 
