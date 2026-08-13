@@ -15,15 +15,18 @@
 		274E1FCA196D342DB0D46A92 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
 		2A9517AC8A7AA15C181A781B /* ReadBoardRemote in Frameworks */ = {isa = PBXBuildFile; productRef = B7C08971FD535DFFB6007675 /* ReadBoardRemote */; };
 		31560622FBD69BD27572D3AB /* ReadBoardFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = FB5AF445B1AC029341A4AA6B /* ReadBoardFeatures */; };
+		3271D4202EAF9811AB98BB3B /* ReadBoardGoShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 726FA40827ACBE1141715B50 /* ReadBoardGoShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3F8EA2DF538C65C0BFE71544 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = BE07D790CD04394F5E4C0677 /* ReadBoardContract */; };
 		44651D4209F09EB4845FD9AA /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3906F9F3F41EC6D1475D255 /* MainTabView.swift */; };
 		4BE975CA57F9B5B83097F15A /* ReadBoardUI in Frameworks */ = {isa = PBXBuildFile; productRef = C2C60BA8116BFA055AB222F1 /* ReadBoardUI */; };
 		4C83473A49D2A293B76C0FBC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */; };
 		592D5B1EE4E611BA67823AF2 /* GoSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E3B7C793A03D0112BDFC0C5 /* GoSettingsView.swift */; };
 		651770E51B95355EA25E4C68 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */; };
+		6FB232135FB0429B41FD4C1A /* ReadBoardGoShareIOS.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D1800156CE1ECA732C3EDA4B /* ReadBoardGoShareIOS.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		710DB54AD197F8E4C736D3B6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFFA1B3192D0547CC8A1C60 /* RootView.swift */; };
 		72AC547A0018CE51C471E371 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
 		8C51452DD8DBC7D9CFF79EF8 /* ReadBoardGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */; };
+		99BD00810BA49C1D2E99F4D3 /* ShareViewControllerIOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C957AC4EAACC0B58574FD1 /* ShareViewControllerIOS.swift */; };
 		9C864E6D9CD26E783FECCB63 /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0B32B6DFC7A4A72F1A8EED13 /* ReadBoardGoCore */; };
 		9D83DEB11E71A9FC12C02636 /* OperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91254373EB036B19C1207030 /* OperationsView.swift */; };
 		A13ED6AD71111DA800FC3DE8 /* ReadBoardContract in Frameworks */ = {isa = PBXBuildFile; productRef = 5F358149DD97900A485D2CDF /* ReadBoardContract */; };
@@ -35,8 +38,51 @@
 		C7FA4AE21A3E469FAFC0A0CA /* GoDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */; };
 		D9AA5F8079483FBC6C5C2C5D /* ReadBoardGoCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F19D62DB0C9B5CC504FB5B7 /* ReadBoardGoCore */; };
 		DB0FF59F7F62C3FF88FE7917 /* GoDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */; };
+		E39C27686814AB50018DAED2 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95BEC851BB6D4C280F50629 /* ShareViewController.swift */; };
 		FED6E2C704E0D9F3DAF89F63 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4A7107F70F81EFC7C493B6 /* ConnectionView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7C7AB2485C7E5A7E3E10193C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0510E4E9B0E7D258F3A73D91 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BE1EB575C47D4FC5964A20C5;
+			remoteInfo = ReadBoardGoShareIOS;
+		};
+		BFC2A71B29768635CCAA93DE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0510E4E9B0E7D258F3A73D91 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6FE55BDAAD111F4C03EAEC45;
+			remoteInfo = ReadBoardGoShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		05F496A09596512B19320425 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6FB232135FB0429B41FD4C1A /* ReadBoardGoShareIOS.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CE7A345EF4056B41C882940A /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3271D4202EAF9811AB98BB3B /* ReadBoardGoShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ReadBoardGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -47,10 +93,14 @@
 		43D02A9C08B67F2FF992A07C /* GoDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoDesignSystem.swift; sourceTree = "<group>"; };
 		65313FA610EDBA59A0A7D6F1 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		6C5CD2F09C2627819CDCEC01 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		726FA40827ACBE1141715B50 /* ReadBoardGoShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ReadBoardGoShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F1CEBA35B7FF86D140C9C70 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		91254373EB036B19C1207030 /* OperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationsView.swift; sourceTree = "<group>"; };
 		96AF6499D545B04A0B18785F /* readboard-go */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "readboard-go"; path = .; sourceTree = SOURCE_ROOT; };
 		A3906F9F3F41EC6D1475D255 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		B5C957AC4EAACC0B58574FD1 /* ShareViewControllerIOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewControllerIOS.swift; sourceTree = "<group>"; };
+		D1800156CE1ECA732C3EDA4B /* ReadBoardGoShareIOS.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ReadBoardGoShareIOS.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E95BEC851BB6D4C280F50629 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		F73086C4EEAE6CEA1077BCEA /* ReadBoardGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBoardGoApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -86,6 +136,7 @@
 			children = (
 				FAE60E71606E1AA6470C73C2 /* App */,
 				69C2A83D21B3DB6556CDDED0 /* Packages */,
+				836E489F5CAE3A9DD4D5C4FB /* ShareExtension */,
 				4D895125B50003E723BD850D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -95,6 +146,8 @@
 			children = (
 				031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */,
 				3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */,
+				726FA40827ACBE1141715B50 /* ReadBoardGoShare.appex */,
+				D1800156CE1ECA732C3EDA4B /* ReadBoardGoShareIOS.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -105,6 +158,15 @@
 				96AF6499D545B04A0B18785F /* readboard-go */,
 			);
 			name = Packages;
+			sourceTree = "<group>";
+		};
+		836E489F5CAE3A9DD4D5C4FB /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				E95BEC851BB6D4C280F50629 /* ShareViewController.swift */,
+				B5C957AC4EAACC0B58574FD1 /* ShareViewControllerIOS.swift */,
+			);
+			path = ShareExtension;
 			sourceTree = "<group>";
 		};
 		91079D9CA9DAADE5DE5A837C /* Design */ = {
@@ -142,11 +204,13 @@
 				C7BC491CD4B071C35FA7CD1E /* Sources */,
 				41C5B8DC0A0EE1B9244AB21D /* Resources */,
 				CAB31DE664108876AB1C0120 /* Frameworks */,
+				CE7A345EF4056B41C882940A /* Embed Foundation Extensions */,
 				BF6D0B6EEA18EF104F97CAD4 /* Package Icon Variants */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				904F21DDE492EF9AF2DA5249 /* PBXTargetDependency */,
 			);
 			name = ReadBoardGoMac;
 			packageProductDependencies = (
@@ -160,6 +224,23 @@
 			productReference = 3FCC0D642CD6D53AF67A5098 /* ReadBoardGoMac.app */;
 			productType = "com.apple.product-type.application";
 		};
+		6FE55BDAAD111F4C03EAEC45 /* ReadBoardGoShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4738A8E01823210D022BC647 /* Build configuration list for PBXNativeTarget "ReadBoardGoShare" */;
+			buildPhases = (
+				C8A78938F5D397E5E4F1B645 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadBoardGoShare;
+			packageProductDependencies = (
+			);
+			productName = ReadBoardGoShare;
+			productReference = 726FA40827ACBE1141715B50 /* ReadBoardGoShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		B15A216F3E9463B77568386F /* ReadBoardGo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6885C25D637A26F2F4A909AB /* Build configuration list for PBXNativeTarget "ReadBoardGo" */;
@@ -167,10 +248,12 @@
 				3EE46510BA3D0AE9D0CDF68E /* Sources */,
 				E410CE078A9CF7EFEE9A5259 /* Resources */,
 				74497EAD6D2698789AEC08F8 /* Frameworks */,
+				05F496A09596512B19320425 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D2BB98A64B26981F3B3BDD3F /* PBXTargetDependency */,
 			);
 			name = ReadBoardGo;
 			packageProductDependencies = (
@@ -182,6 +265,23 @@
 			productName = ReadBoardGo;
 			productReference = 031ABC94FEB20ADDF120A653 /* ReadBoardGo.app */;
 			productType = "com.apple.product-type.application";
+		};
+		BE1EB575C47D4FC5964A20C5 /* ReadBoardGoShareIOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7CA4030636DA8D929AACFA4F /* Build configuration list for PBXNativeTarget "ReadBoardGoShareIOS" */;
+			buildPhases = (
+				F4AB72F9F749FDB278B5702C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ReadBoardGoShareIOS;
+			packageProductDependencies = (
+			);
+			productName = ReadBoardGoShareIOS;
+			productReference = D1800156CE1ECA732C3EDA4B /* ReadBoardGoShareIOS.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -195,7 +295,13 @@
 					0F1C9143F972FC7D868CF595 = {
 						ProvisioningStyle = Automatic;
 					};
+					6FE55BDAAD111F4C03EAEC45 = {
+						ProvisioningStyle = Automatic;
+					};
 					B15A216F3E9463B77568386F = {
+						ProvisioningStyle = Automatic;
+					};
+					BE1EB575C47D4FC5964A20C5 = {
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -219,7 +325,9 @@
 			projectRoot = "";
 			targets = (
 				B15A216F3E9463B77568386F /* ReadBoardGo */,
+				BE1EB575C47D4FC5964A20C5 /* ReadBoardGoShareIOS */,
 				0F1C9143F972FC7D868CF595 /* ReadBoardGoMac */,
+				6FE55BDAAD111F4C03EAEC45 /* ReadBoardGoShare */,
 			);
 		};
 /* End PBXProject section */
@@ -300,7 +408,36 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C8A78938F5D397E5E4F1B645 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E39C27686814AB50018DAED2 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4AB72F9F749FDB278B5702C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				99BD00810BA49C1D2E99F4D3 /* ShareViewControllerIOS.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		904F21DDE492EF9AF2DA5249 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6FE55BDAAD111F4C03EAEC45 /* ReadBoardGoShare */;
+			targetProxy = BFC2A71B29768635CCAA93DE /* PBXContainerItemProxy */;
+		};
+		D2BB98A64B26981F3B3BDD3F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BE1EB575C47D4FC5964A20C5 /* ReadBoardGoShareIOS */;
+			targetProxy = 7C7AB2485C7E5A7E3E10193C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3BA0AB782B0EEFF807EB73CA /* Release */ = {
@@ -416,6 +553,25 @@
 			};
 			name = Debug;
 		};
+		67C6B4F218B9F4864C3F4A77 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = "App/ShareExtension-Info-iOS.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo.share;
+				PRODUCT_NAME = "ReadBoard Go Share";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		A24CBEA76659EE4200851559 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -432,6 +588,25 @@
 				PRODUCT_NAME = "ReadBoard Go";
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A26DA2F1DDB8AB37B2B1900B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = "App/ShareExtension-Info-iOS.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo.share;
+				PRODUCT_NAME = "ReadBoard Go Share";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -496,6 +671,44 @@
 			};
 			name = Debug;
 		};
+		B38A24C5DA4D3D3035676297 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "App/ShareExtension-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo.mac.share;
+				PRODUCT_NAME = "ReadBoard Go Share";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		D61FCE87E35649E86AA75149 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = "App/ShareExtension-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hangbits.ReadBoardGo.mac.share;
+				PRODUCT_NAME = "ReadBoard Go Share";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -508,11 +721,29 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		4738A8E01823210D022BC647 /* Build configuration list for PBXNativeTarget "ReadBoardGoShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D61FCE87E35649E86AA75149 /* Debug */,
+				B38A24C5DA4D3D3035676297 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		6885C25D637A26F2F4A909AB /* Build configuration list for PBXNativeTarget "ReadBoardGo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5963DD8357598E348DA1E1EF /* Debug */,
 				3BA0AB782B0EEFF807EB73CA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7CA4030636DA8D929AACFA4F /* Build configuration list for PBXNativeTarget "ReadBoardGoShareIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				67C6B4F218B9F4864C3F4A77 /* Debug */,
+				A26DA2F1DDB8AB37B2B1900B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -541,7 +772,7 @@
 			repositoryURL = "https://github.com/liuhangbj/ReadBoard.git";
 			requirement = {
 				kind = revision;
-				revision = ccabbd9624b2073b1b24cb58b18500836a7e0f24;
+				revision = 7511c1fe5dc210f0b3591ead3acb3afc3483df3a;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

@@ -7,7 +7,7 @@ packages:
     path: .
   ReadBoard:
     url: https://github.com/liuhangbj/ReadBoard.git
-    revision: ccabbd9624b2073b1b24cb58b18500836a7e0f24
+    revision: 7511c1fe5dc210f0b3591ead3acb3afc3483df3a
 targets:
   ReadBoardGo:
     type: application
@@ -18,7 +18,11 @@ targets:
         excludes:
           - Info-iOS.plist
           - Info-macOS.plist
+          - ShareExtension-Info.plist
+          - ShareExtension-Info-iOS.plist
     dependencies:
+      - target: ReadBoardGoShareIOS
+        embed: true
       - package: ReadBoardGoCore
         product: ReadBoardGoCore
       - package: ReadBoard
@@ -35,6 +39,19 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: App/Info-iOS.plist
         CODE_SIGN_STYLE: Automatic
+  ReadBoardGoShareIOS:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ShareExtension/ShareViewControllerIOS.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo.share
+        PRODUCT_NAME: ReadBoard Go Share
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: App/ShareExtension-Info-iOS.plist
+        CODE_SIGN_STYLE: Automatic
   ReadBoardGoMac:
     type: application
     platform: macOS
@@ -44,6 +61,8 @@ targets:
         excludes:
           - Info-iOS.plist
           - Info-macOS.plist
+          - ShareExtension-Info.plist
+          - ShareExtension-Info-iOS.plist
     dependencies:
       - package: ReadBoardGoCore
         product: ReadBoardGoCore
@@ -55,6 +74,8 @@ targets:
         product: ReadBoardUI
       - package: ReadBoard
         product: ReadBoardFeatures
+      - target: ReadBoardGoShare
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo.mac
@@ -70,6 +91,19 @@ targets:
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIconLight.icns
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIconDark.icns
         basedOnDependencyAnalysis: false
+  ReadBoardGoShare:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ShareExtension/ShareViewController.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hangbits.ReadBoardGo.mac.share
+        PRODUCT_NAME: ReadBoard Go Share
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: App/ShareExtension-Info.plist
+        CODE_SIGN_STYLE: Automatic
 schemes:
   ReadBoardGo:
     build:

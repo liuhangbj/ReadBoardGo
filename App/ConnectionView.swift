@@ -11,6 +11,7 @@ struct ConnectionView: View {
   @Environment(ReadBoardGoSession.self) private var session
   @State private var serverAddress = ""
   @State private var password = ""
+  @State private var revealsPassword = false
   @State private var pairingCode = ""
   @State private var deviceName = Self.defaultDeviceName
   @State private var showManualConnection = false
@@ -289,11 +290,28 @@ struct ConnectionView: View {
 
       VStack(alignment: .leading, spacing: GoDesign.Space.sm) {
         GoSectionLabel(text: "访问密码")
-        SecureField("在 ReadBoard 中设置的远程访问密码", text: $password)
+        HStack(spacing: GoDesign.Space.sm) {
+          Group {
+            if revealsPassword {
+              TextField("在 ReadBoard 中设置的远程访问密码", text: $password)
+            } else {
+              SecureField("在 ReadBoard 中设置的远程访问密码", text: $password)
+            }
+          }
           .textFieldStyle(.plain)
           .focused($focusedField, equals: .password)
-          .goField(focused: focusedField == .password)
           .onSubmit { login() }
+
+          Button {
+            revealsPassword.toggle()
+          } label: {
+            Image(systemName: revealsPassword ? "eye.slash" : "eye")
+              .frame(width: 22, height: 22)
+          }
+          .buttonStyle(GoQuietButtonStyle())
+          .help(revealsPassword ? "隐藏密码" : "显示密码")
+        }
+        .goField(focused: focusedField == .password)
       }
 
       Button(action: login) {

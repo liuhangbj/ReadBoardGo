@@ -43,6 +43,7 @@ struct GoCombinedSettingsView: View {
       case .remote: AnyView(ContentUnavailableView(
         "仅能在服务端设置远程访问", systemImage: "server.rack"))
       case .reader: AnyView(ReadBoardReaderSettingsPane())
+      case .inbox: AnyView(ReadBoardInboxSettingsPane(inbox: environment.inbox))
       case .llm: AnyView(ReadBoardLLMSettingsPane(
         configuration: environment.configuration))
       case .deps: AnyView(ReadBoardDependencySettingsPane(
@@ -78,6 +79,8 @@ struct GoCombinedSettingsView: View {
       switch page {
       case .reader:
         true
+      case .inbox:
+        environment.permissions.allows(.manageConfiguration, capability: .configuration)
       case .remote:
         false
       case .general:

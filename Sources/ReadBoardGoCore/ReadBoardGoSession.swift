@@ -15,11 +15,14 @@ public final class ReadBoardGoSession {
     public private(set) var trustCandidate: ServerTrustCandidate?
     public private(set) var isOffline = false
     public private(set) var cachedAt: Date?
+    public private(set) var pendingInboxImportCount = 0
     public let discovery = ReadBoardDiscovery()
     public let remoteHealth = ReadBoardRemoteHealthStore()
 
     private let store: any ConnectionStoring
     private let offlineCache: ReadBoardGoOfflineCache
+    private let pendingInboxStore: PendingInboxImportStore
+    private var isFlushingInboxImports = false
 
     public init(
         store: any ConnectionStoring = DefaultConnectionStore(),
@@ -27,6 +30,8 @@ public final class ReadBoardGoSession {
     ) {
         self.store = store
         self.offlineCache = offlineCache
+        self.pendingInboxStore = PendingInboxImportStore()
+        self.pendingInboxImportCount = pendingInboxStore.load().count
         do {
             let stored = try store.load()
             if let stored, stored.baseURL.scheme == "https",
@@ -118,6 +123,7 @@ public final class ReadBoardGoSession {
             isOffline = false
             self.trustCandidate = nil
             discovery.stop()
+            await flushPendingInboxImports()
         } catch is CancellationError {
             return
         } catch {
@@ -155,6 +161,7 @@ public final class ReadBoardGoSession {
             isOffline = false
             self.trustCandidate = nil
             discovery.stop()
+            await flushPendingInboxImports()
         } catch is CancellationError {
             return
         } catch {
@@ -182,6 +189,7 @@ public final class ReadBoardGoSession {
             try store.save(upgraded)
             self.connection = upgraded
             errorMessage = nil
+            await flushPendingInboxImports()
         } catch {
             let cachedProfile = await offlineCache.profile()
             profile = cachedProfile
@@ -228,6 +236,35 @@ public final class ReadBoardGoSession {
         remoteHealth.reset()
     }
 
+    /// 系统分享先落本机暂存，再尝试发送；服务端离线时不会丢失链接。
+    public func enqueueInboxImport(_ request: InboxImportRequest) {
+        pendingInboxStore.append(request)
+        pendingInboxImportCount = pendingInboxStore.load().count
+        Task { await flushPendingInboxImports() }
+    }
+
+    public func flushPendingInboxImports() async {
+        guard !isFlushingInboxImports, connection != nil else { return }
+        isFlushingInboxImports = true
+        defer {
+            isFlushingInboxImports = false
+            pendingInboxImportCount = pendingInboxStore.load().count
+        }
+        for request in pendingInboxStore.load() {
+            do {
+                _ = try await RemoteInboxGateway(client: try client()).importURL(request)
+                pendingInboxStore.remove(requestID: request.requestID)
+            } catch {
+                if isOffline {
+                    errorMessage = "链接已暂存，恢复连接后会自动发送"
+                } else {
+                    errorMessage = "链接暂未送达：\(error.localizedDescription)"
+                }
+                break
+            }
+        }
+    }
+
     /// Go 与 Core 共同页面的远程装配入口。共享页面无需知道 HTTP、证书或登录态细节。
     public func featureEnvironment() throws -> ReadBoardFeatureEnvironment {
         let client = try client()
@@ -245,6 +282,7 @@ public final class ReadBoardGoSession {
             configuration: RemoteConfigurationGateway(client: client),
             authentication: RemoteAuthenticationGateway(client: client),
             maintenance: RemoteMaintenanceGateway(client: client),
+            inbox: RemoteInboxGateway(client: client),
             dependencyManagement: RemoteDependencyManagementGateway(client: client),
             dataRevision: RemoteDataRevisionGateway(client: client),
             permissions: ReadBoardFeaturePermissions(
