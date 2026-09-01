@@ -1,0 +1,146 @@
+name: Unsigned Beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Unsigned beta version, for example v0.9.4-beta.3-unsigned"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: unsigned-beta-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+
+      - name: Validate unsigned beta input
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$GITHUB_REF" = "refs/heads/main" ]
+          [[ "$RELEASE_VERSION" =~ ^v0\.9\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?-unsigned$ ]]
+          script/verify_core_ref.sh
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "Tag already exists: $RELEASE_VERSION" >&2
+            exit 1
+          fi
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "Release already exists: $RELEASE_VERSION" >&2
+            exit 1
+          fi
+
+      - name: Test remote client package
+        env:
+          READBOARD_CORE_PATH: ${{ runner.temp }}/no-local-core
+        run: swift test
+
+      - name: Build iOS release
+        run: |
+          xcodebuild -quiet \
+            -project ReadBoardGo.xcodeproj \
+            -scheme ReadBoardGo \
+            -configuration Release \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$RUNNER_TEMP/readboard-go-ios" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package universal macOS app
+        env:
+          READBOARD_OUTPUT_DIR: ${{ runner.temp }}/release
+          READBOARD_DERIVED_DATA: ${{ runner.temp }}/readboard-go-macos
+          READBOARD_VERSION: ${{ inputs.version }}
+          READBOARD_BUILD_NUMBER: ${{ github.run_number }}
+        run: script/package_macos.sh
+
+      - name: Validate unsigned universal app
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/release/ReadBoard Go.app"
+          MAIN_BINARY="$APP/Contents/MacOS/ReadBoard Go"
+          EXPECTED_VERSION="${RELEASE_VERSION#v}"
+          ACTUAL_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+          [ "$ACTUAL_VERSION" = "$EXPECTED_VERSION" ]
+          codesign --verify --deep --strict "$APP"
+          SIGNING_DETAILS="$(codesign -dvvv "$APP" 2>&1)"
+          grep -Fq 'Signature=adhoc' <<<"$SIGNING_DETAILS"
+          if grep -q '^Authority=' <<<"$SIGNING_DETAILS"; then
+            echo "Unsigned Beta must not carry a distribution authority" >&2
+            exit 1
+          fi
+
+          verify_universal() {
+            local binary="$1"
+            local architectures
+            architectures="$(lipo -archs "$binary")"
+            [[ " $architectures " == *" arm64 "* && " $architectures " == *" x86_64 "* ]]
+            echo "Universal binary: $binary ($architectures)"
+          }
+
+          verify_universal "$MAIN_BINARY"
+          EXTENSION="$(find "$APP/Contents/PlugIns" -maxdepth 1 -type d -name '*.appex' -print -quit)"
+          [ -n "$EXTENSION" ]
+          EXTENSION_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$EXTENSION/Contents/Info.plist")"
+          verify_universal "$EXTENSION/Contents/MacOS/$EXTENSION_EXECUTABLE"
+
+      - name: Create unsigned beta archive
+        id: archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE="$RUNNER_TEMP/ReadBoard-Go-${RELEASE_VERSION#v}-macOS-universal.zip"
+          CHECKSUM="$ARCHIVE.sha256"
+          NOTES="$RUNNER_TEMP/unsigned-beta-notes.md"
+          ditto -c -k --keepParent "$RUNNER_TEMP/release/ReadBoard Go.app" "$ARCHIVE"
+          (
+            cd "$(dirname "$ARCHIVE")"
+            shasum -a 256 "$(basename "$ARCHIVE")" > "$(basename "$CHECKSUM")"
+          )
+          cat > "$NOTES" <<'NOTES'
+          ## Unsigned Beta
+
+          This build is ad-hoc signed and has **not** been signed with Developer ID or notarized by Apple. It is provided only for testing on devices you control. macOS Gatekeeper may block the first launch.
+
+          1. Download both the ZIP and its `.sha256` file into the same directory.
+          2. Verify the download with `shasum -a 256 -c <checksum-file>`.
+          3. Extract the ZIP and move ReadBoard Go to Applications.
+          4. Try opening it normally. If macOS blocks it, review the warning and use **System Settings → Privacy & Security → Open Anyway** only after confirming the checksum and that this release comes from this repository.
+
+          Do not redistribute this build as a signed or notarized production release.
+          NOTES
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "notes=$NOTES" >> "$GITHUB_OUTPUT"
+
+      - name: Publish unsigned beta prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_PATH: ${{ steps.archive.outputs.archive }}
+          CHECKSUM_PATH: ${{ steps.archive.outputs.checksum }}
+          NOTES_PATH: ${{ steps.archive.outputs.notes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_VERSION" "$ARCHIVE_PATH" "$CHECKSUM_PATH" \
+            --target "$GITHUB_SHA" \
+            --title "ReadBoard Go $RELEASE_VERSION (Unsigned Beta)" \
+            --notes-file "$NOTES_PATH" \
+            --prerelease
