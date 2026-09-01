@@ -74,6 +74,28 @@ final class ReadBoardGoCoreTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(StoredServerConnection.self, from: data), value)
     }
 
+    @MainActor
+    func testStoredV1ConnectionIsRetainedForAutomaticServerUpgradeProbe() throws {
+        let credential = RemotePairingCredential(
+            deviceID: "device", deviceName: "Mac", token: "secret",
+            apiVersion: "1", scopes: RemoteAccessScope.reader)
+        let stored = StoredServerConnection(
+            baseURL: try XCTUnwrap(URL(string: "https://10.0.0.5:7331/")),
+            credential: credential,
+            certificateFingerprint: String(repeating: "a", count: 64))
+        let cacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("readboard-go-upgrade-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        let session = ReadBoardGoSession(
+            store: StaticConnectionStore(connection: stored),
+            offlineCache: ReadBoardGoOfflineCache(fileURL: cacheURL))
+
+        XCTAssertEqual(session.connection, stored)
+        XCTAssertTrue(session.isRestoringConnection)
+        XCTAssertNil(session.errorMessage)
+    }
+
     func testPermissionRequiresBothAdvertisedCapabilityAndGrantedScope() {
         let readOnly = ReadBoardPermissionSet(
             capabilities: [.library, .processing],
@@ -208,6 +230,153 @@ final class ReadBoardGoCoreTests: XCTestCase {
         XCTAssertEqual(switchedStatus.pendingReadingMutations, 0)
     }
 
+    func testOfflineReadMutationKeepsSocialPagesAndNavigationCountsInSync() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = directory.appendingPathComponent("offline-cache.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let article = socialSummary(
+            id: 101, contentType: "article", source: "xiaohongshu", sourceID: 11)
+        let video = socialSummary(
+            id: 102, contentType: "video", source: "douyin", sourceID: 12)
+        let nodes = [
+            LibraryNode(
+                id: "folder:1", kind: .folder, name: "社交媒体", count: 2, unread: 2,
+                sourceID: nil, folderID: 1,
+                children: [
+                    LibraryNode(
+                        id: "source:11", kind: .source, name: "小红书", count: 1, unread: 1,
+                        sourceID: 11, folderID: 1),
+                    LibraryNode(
+                        id: "source:12", kind: .source, name: "抖音", count: 1, unread: 1,
+                        sourceID: 12, folderID: 1),
+                ])
+        ]
+        let counts = LibraryCountsSnapshot(
+            total: 2, unread: 2, pending: 0, pendingUnread: 0,
+            exported: 0, exportedUnread: 0,
+            articles: 0, articleUnread: 0,
+            podcasts: 0, podcastUnread: 0,
+            videos: 0, videoUnread: 0,
+            socialArticles: 1, socialArticleUnread: 1,
+            socialVideos: 1, socialVideoUnread: 1)
+        let articleQuery = ContentQuery(filter: ContentFilter(
+            category: .article, sourceFamily: .social))
+        let videoQuery = ContentQuery(filter: ContentFilter(
+            category: .video, sourceFamily: .social))
+
+        let cache = ReadBoardGoOfflineCache(fileURL: fileURL)
+        await cache.storeLibrarySnapshot(LibrarySnapshot(nodes: nodes, counts: counts))
+        await cache.storePage(ContentPage(items: [article], nextCursor: nil), query: articleQuery)
+        await cache.storePage(ContentPage(items: [video], nextCursor: nil), query: videoQuery)
+
+        await cache.apply(ContentState(
+            contentID: article.id, isRead: true, isStarred: false, updatedAt: 1))
+        let articleSnapshot = await cache.librarySnapshot()
+        var snapshot = try XCTUnwrap(articleSnapshot)
+        XCTAssertEqual(snapshot.counts.unread, 1)
+        XCTAssertEqual(snapshot.counts.socialArticleUnread, 0)
+        XCTAssertEqual(snapshot.counts.socialVideoUnread, 1)
+        XCTAssertEqual(snapshot.nodes[0].unread, 1)
+        XCTAssertEqual(snapshot.nodes[0].children.map(\.unread), [0, 1])
+        let updatedArticlePage = await cache.page(query: articleQuery)
+        XCTAssertTrue(try XCTUnwrap(updatedArticlePage).items[0].isRead)
+
+        await cache.apply(ContentState(
+            contentID: video.id, isRead: true, isStarred: false, updatedAt: 2))
+        // 重放同一目标状态必须幂等，不能把未读计数减成负数。
+        await cache.apply(ContentState(
+            contentID: video.id, isRead: true, isStarred: true, updatedAt: 3))
+        let finalSnapshot = await cache.librarySnapshot()
+        snapshot = try XCTUnwrap(finalSnapshot)
+        XCTAssertEqual(snapshot.counts.unread, 0)
+        XCTAssertEqual(snapshot.counts.socialArticleUnread, 0)
+        XCTAssertEqual(snapshot.counts.socialVideoUnread, 0)
+        XCTAssertEqual(snapshot.nodes[0].unread, 0)
+        XCTAssertEqual(snapshot.nodes[0].children.map(\.unread), [0, 0])
+    }
+
+    func testOfflineReadMutationKeepsInboxSocialBreakdownInSync() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = directory.appendingPathComponent("offline-cache.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let ordinaryArticle = socialSummary(
+            id: 201, contentType: "article", source: "web", sourceID: nil)
+        let socialArticle = socialSummary(
+            id: 202, contentType: "article", source: "xiaohongshu", sourceID: nil)
+        let ordinaryVideo = socialSummary(
+            id: 203, contentType: "video", source: "youtube", sourceID: nil)
+        let socialVideo = socialSummary(
+            id: 204, contentType: "video", source: "douyin", sourceID: nil)
+        let query = ContentQuery(filter: ContentFilter(inboxOnly: true))
+        let counts = LibraryCountsSnapshot(
+            total: 4, unread: 4, pending: 0, pendingUnread: 0,
+            exported: 0, exportedUnread: 0,
+            articles: 1, articleUnread: 1,
+            podcasts: 0, podcastUnread: 0,
+            videos: 1, videoUnread: 1,
+            socialArticles: 1, socialArticleUnread: 1,
+            socialVideos: 1, socialVideoUnread: 1,
+            inbox: 4, inboxUnread: 4,
+            inboxArticles: 2, inboxArticleUnread: 2,
+            inboxPodcasts: 0, inboxPodcastUnread: 0,
+            inboxVideos: 2, inboxVideoUnread: 2,
+            inboxSocialArticles: 1, inboxSocialArticleUnread: 1,
+            inboxSocialVideos: 1, inboxSocialVideoUnread: 1)
+
+        let cache = ReadBoardGoOfflineCache(fileURL: fileURL)
+        await cache.storeLibrarySnapshot(LibrarySnapshot(nodes: [], counts: counts))
+        await cache.storePage(ContentPage(
+            items: [ordinaryArticle, socialArticle, ordinaryVideo, socialVideo],
+            nextCursor: nil), query: query)
+
+        await cache.apply(ContentState(
+            contentID: socialArticle.id, isRead: true, isStarred: false, updatedAt: 1))
+        let socialArticleSnapshot = await cache.librarySnapshot()
+        var snapshot = try XCTUnwrap(socialArticleSnapshot)
+        XCTAssertEqual(snapshot.counts.unread, 3)
+        XCTAssertEqual(snapshot.counts.inboxUnread, 3)
+        XCTAssertEqual(snapshot.counts.inboxArticleUnread, 1)
+        XCTAssertEqual(snapshot.counts.inboxSocialArticleUnread, 0)
+        XCTAssertEqual(snapshot.counts.articleUnread, 1)
+        XCTAssertEqual(snapshot.counts.socialArticleUnread, 0)
+
+        await cache.apply(ContentState(
+            contentID: ordinaryVideo.id, isRead: true, isStarred: false, updatedAt: 2))
+        // 重放同一目标状态仍应幂等。
+        await cache.apply(ContentState(
+            contentID: ordinaryVideo.id, isRead: true, isStarred: true, updatedAt: 3))
+        let ordinaryVideoSnapshot = await cache.librarySnapshot()
+        snapshot = try XCTUnwrap(ordinaryVideoSnapshot)
+        XCTAssertEqual(snapshot.counts.unread, 2)
+        XCTAssertEqual(snapshot.counts.inboxUnread, 2)
+        XCTAssertEqual(snapshot.counts.inboxVideoUnread, 1)
+        XCTAssertEqual(snapshot.counts.inboxSocialVideoUnread, 1)
+        XCTAssertEqual(snapshot.counts.videoUnread, 0)
+        XCTAssertEqual(snapshot.counts.socialVideoUnread, 1)
+    }
+
+    private func socialSummary(
+        id: Int64,
+        contentType: String,
+        source: String,
+        sourceID: Int64?
+    ) -> ContentSummary {
+        ContentSummary(
+            id: id, contentType: contentType, source: source, sourceType: source,
+            sourceID: sourceID, sourceName: source, title: "Sample", author: nil,
+            url: "https://example.com/\(id)", language: nil, publishedAt: nil,
+            excerpt: nil, score: nil, summary: nil, fetchStatus: 2,
+            isRead: false, isStarred: false, imageURL: nil,
+            hasTranslation: false, hasTranscript: false,
+            isMedia: contentType == "video", translatedHead: nil,
+            translatedTitle: nil, hasFulltext: true, hasExport: false,
+            hasUnmetProcessing: false, accessState: nil)
+    }
+
     func testLiveTLSCertificatePinningWhenEnabled() async throws {
         guard let raw = ProcessInfo.processInfo.environment["READBOARD_GO_LIVE_SERVER"],
               let baseURL = URL(string: raw) else {
@@ -239,4 +408,12 @@ final class ReadBoardGoCoreTests: XCTestCase {
             $0.baseURLs.allSatisfy { $0.scheme == "https" }
         })
     }
+}
+
+private struct StaticConnectionStore: ConnectionStoring {
+    let connection: StoredServerConnection?
+
+    func load() throws -> StoredServerConnection? { connection }
+    func save(_ connection: StoredServerConnection) throws {}
+    func delete() throws {}
 }

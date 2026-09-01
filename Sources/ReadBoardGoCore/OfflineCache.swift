@@ -130,7 +130,9 @@ public actor ReadBoardGoOfflineCache {
         return nil
     }
 
-    fileprivate func apply(_ state: ContentState) {
+    func apply(_ state: ContentState) {
+        let previousItem = cachedItem(contentID: state.contentID)
+        let isInboxContent = cachedAsInbox(contentID: state.contentID)
         for key in envelope.pages.keys {
             guard var page = envelope.pages[key],
                   let index = page.value.items.firstIndex(where: { $0.id == state.contentID }) else {
@@ -144,8 +146,139 @@ public actor ReadBoardGoOfflineCache {
             page.updatedAt = Date().timeIntervalSince1970
             envelope.pages[key] = page
         }
+        if let previousItem, previousItem.isRead != state.isRead {
+            applyReadDelta(
+                state.isRead ? -1 : 1,
+                item: previousItem,
+                isInboxContent: isInboxContent)
+        }
         touch()
         persist()
+    }
+
+    private func cachedItem(contentID: Int64) -> ContentSummary? {
+        for record in envelope.pages.values {
+            if let item = record.value.items.first(where: { $0.id == contentID }) {
+                return item
+            }
+        }
+        return nil
+    }
+
+    private func cachedAsInbox(contentID: Int64) -> Bool {
+        for (key, record) in envelope.pages {
+            guard record.value.items.contains(where: { $0.id == contentID }),
+                  let data = Data(base64Encoded: key),
+                  let query = try? decoder.decode(ContentQuery.self, from: data)
+            else { continue }
+            if query.filter.inboxOnly == true { return true }
+        }
+        // 收件箱单项不属于订阅源；即使用户还未打开过收件箱分类页，也能从
+        // 列表 DTO 的 sourceID 判定并同步其导航计数。
+        return cachedItem(contentID: contentID)?.sourceID == nil
+    }
+
+    private func applyReadDelta(
+        _ delta: Int,
+        item: ContentSummary,
+        isInboxContent: Bool
+    ) {
+        guard var snapshot = envelope.librarySnapshot else { return }
+        let counts = snapshot.value.counts
+        let shifted: (Int) -> Int = { max(0, $0 + delta) }
+        let shiftedOptional: (Int?) -> Int? = { $0.map(shifted) }
+        let isSocial = ContentSourceFamily.socialSourceTypes.contains(item.source.lowercased())
+            || item.sourceType.map {
+                ContentSourceFamily.socialSourceTypes.contains($0.lowercased())
+            } == true
+
+        let newCounts = LibraryCountsSnapshot(
+            total: counts.total,
+            unread: shifted(counts.unread),
+            pending: counts.pending,
+            pendingUnread: item.hasUnmetProcessing
+                ? shifted(counts.pendingUnread) : counts.pendingUnread,
+            exported: counts.exported,
+            exportedUnread: item.hasExport
+                ? shifted(counts.exportedUnread) : counts.exportedUnread,
+            articles: counts.articles,
+            articleUnread: item.contentType == ContentCategory.article.rawValue && !isSocial
+                ? shifted(counts.articleUnread) : counts.articleUnread,
+            podcasts: counts.podcasts,
+            podcastUnread: item.contentType == ContentCategory.podcast.rawValue
+                ? shifted(counts.podcastUnread) : counts.podcastUnread,
+            videos: counts.videos,
+            videoUnread: item.contentType == ContentCategory.video.rawValue && !isSocial
+                ? shifted(counts.videoUnread) : counts.videoUnread,
+            socialArticles: counts.socialArticles,
+            socialArticleUnread: item.contentType == ContentCategory.article.rawValue && isSocial
+                ? shiftedOptional(counts.socialArticleUnread) : counts.socialArticleUnread,
+            socialVideos: counts.socialVideos,
+            socialVideoUnread: item.contentType == ContentCategory.video.rawValue && isSocial
+                ? shiftedOptional(counts.socialVideoUnread) : counts.socialVideoUnread,
+            inbox: counts.inbox,
+            inboxUnread: isInboxContent
+                ? shiftedOptional(counts.inboxUnread) : counts.inboxUnread,
+            inboxArticles: counts.inboxArticles,
+            inboxArticleUnread: isInboxContent
+                && item.contentType == ContentCategory.article.rawValue
+                ? shiftedOptional(counts.inboxArticleUnread) : counts.inboxArticleUnread,
+            inboxPodcasts: counts.inboxPodcasts,
+            inboxPodcastUnread: isInboxContent
+                && item.contentType == ContentCategory.podcast.rawValue
+                ? shiftedOptional(counts.inboxPodcastUnread) : counts.inboxPodcastUnread,
+            inboxVideos: counts.inboxVideos,
+            inboxVideoUnread: isInboxContent
+                && item.contentType == ContentCategory.video.rawValue
+                ? shiftedOptional(counts.inboxVideoUnread) : counts.inboxVideoUnread,
+            inboxSocialArticles: counts.inboxSocialArticles,
+            inboxSocialArticleUnread: isInboxContent
+                && item.contentType == ContentCategory.article.rawValue && isSocial
+                ? shiftedOptional(counts.inboxSocialArticleUnread)
+                : counts.inboxSocialArticleUnread,
+            inboxSocialVideos: counts.inboxSocialVideos,
+            inboxSocialVideoUnread: isInboxContent
+                && item.contentType == ContentCategory.video.rawValue && isSocial
+                ? shiftedOptional(counts.inboxSocialVideoUnread)
+                : counts.inboxSocialVideoUnread)
+
+        let updatedNodes = item.sourceID.map {
+            adjustingUnread(in: snapshot.value.nodes, sourceID: $0, delta: delta)
+        } ?? snapshot.value.nodes
+        snapshot.value = LibrarySnapshot(nodes: updatedNodes, counts: newCounts)
+        snapshot.updatedAt = Date().timeIntervalSince1970
+        envelope.librarySnapshot = snapshot
+    }
+
+    private func adjustingUnread(
+        in nodes: [LibraryNode],
+        sourceID: Int64,
+        delta: Int
+    ) -> [LibraryNode] {
+        nodes.map { adjustedNode($0, sourceID: sourceID, delta: delta).node }
+    }
+
+    private func adjustedNode(
+        _ node: LibraryNode,
+        sourceID: Int64,
+        delta: Int
+    ) -> (node: LibraryNode, containsSource: Bool) {
+        let childResults = node.children.map {
+            adjustedNode($0, sourceID: sourceID, delta: delta)
+        }
+        let containsSource = node.sourceID == sourceID
+            || childResults.contains(where: \.containsSource)
+        return (
+            LibraryNode(
+                id: node.id,
+                kind: node.kind,
+                name: node.name,
+                count: node.count,
+                unread: containsSource ? max(0, node.unread + delta) : node.unread,
+                sourceID: node.sourceID,
+                folderID: node.folderID,
+                children: childResults.map(\.node)),
+            containsSource)
     }
 
     fileprivate func enqueueRead(contentID: Int64, value: Bool) {
@@ -301,7 +434,15 @@ public struct CachedRemoteLibraryGateway: LibraryGateway {
     }
 
     public func markRead(filter: ContentFilter) async throws -> MutationSummary {
-        try await remote.markRead(filter: filter)
+        do {
+            return try await remote.markRead(filter: filter)
+        } catch {
+            guard isOfflineTransportError(error) else { throw error }
+            // 批量筛选代表服务端权威范围；离线缓存只有有限分页，不能把“当前已缓存条目”
+            // 冒充完整结果，也不能把可变筛选延迟到重连后执行而误伤新入库内容。
+            throw LibraryGatewayError.operationFailed(
+                "当前处于离线状态，无法执行“全部标为已读”；连接恢复后请重试。")
+        }
     }
 
     private func flushPendingMutations() async {

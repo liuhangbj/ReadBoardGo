@@ -7,7 +7,7 @@ packages:
     path: .
   ReadBoard:
     url: https://github.com/liuhangbj/ReadBoard.git
-    revision: f8fabbf751b7b62fc9aaaf2154584dcfd52269e4
+    revision: 4cedb210782708fd59adce241523ae46a8280ce6
 targets:
   ReadBoardGo:
     type: application

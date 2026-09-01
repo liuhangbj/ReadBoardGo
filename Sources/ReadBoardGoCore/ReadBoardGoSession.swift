@@ -42,16 +42,11 @@ public final class ReadBoardGoSession {
             let stored = try store.load()
             if let stored, stored.baseURL.scheme == "https",
                stored.certificateFingerprint != nil {
-                if let version = stored.apiVersion,
-                   version != ReadBoardRemoteAPI.version {
-                    try store.delete()
-                    errorMessage = ReadBoardGoConnectionError.apiVersionMismatch(
-                        client: ReadBoardRemoteAPI.version,
-                        server: version).localizedDescription
-                } else {
-                    connection = stored
-                    isRestoringConnection = true
-                }
+                // 保存的 API 版本只是上次成功连接的快照。服务端升级后设备令牌仍然
+                // 有效，应直接探测 profile 并自动刷新版本，不能删除连接、逼用户重输密码。
+                // 请求本身会携带当前版本；旧服务端仍会明确返回 426。
+                connection = stored
+                isRestoringConnection = true
             } else if stored != nil {
                 try store.delete()
                 errorMessage = "服务端已升级为 HTTPS，请重新登录一次"
@@ -62,7 +57,8 @@ public final class ReadBoardGoSession {
     }
 
     public var isConnected: Bool {
-        connection != nil && profile?.apiVersion == ReadBoardRemoteAPI.version
+        connection != nil && (profile?.apiVersion == ReadBoardRemoteAPI.version
+            || (isOffline && profile != nil))
     }
 
     public func hasScope(_ scope: RemoteAccessScope) -> Bool {
