@@ -98,6 +98,8 @@ jobs:
           verify_universal "$MAIN_BINARY"
           EXTENSION="$(find "$APP/Contents/PlugIns" -maxdepth 1 -type d -name '*.appex' -print -quit)"
           [ -n "$EXTENSION" ]
+          EXTENSION_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$EXTENSION/Contents/Info.plist")"
+          [ "$EXTENSION_VERSION" = "$EXPECTED_VERSION" ]
           EXTENSION_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$EXTENSION/Contents/Info.plist")"
           verify_universal "$EXTENSION/Contents/MacOS/$EXTENSION_EXECUTABLE"
 

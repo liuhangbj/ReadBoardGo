@@ -56,6 +56,8 @@ public enum ReadBoardGoConnectionError: LocalizedError {
     case connectionTimedOut
     case networkUnavailable
     case secureConnectionFailed
+    case requestCancelled
+    case unsafeRedirect
     case connectionFailed
     case apiVersionMismatch(client: String, server: String)
 
@@ -72,6 +74,8 @@ public enum ReadBoardGoConnectionError: LocalizedError {
         case .connectionTimedOut: "连接服务器超时，请检查网络和端口转发"
         case .networkUnavailable: "网络连接不可用，请检查网络后重试"
         case .secureConnectionFailed: "无法建立 TLS 安全连接，请检查代理、服务器地址或证书"
+        case .requestCancelled: "连接请求被系统取消，请检查代理或 VPN 后重试"
+        case .unsafeRedirect: "服务器返回了不安全的跨域跳转，连接已停止"
         case .connectionFailed: "连接服务器失败，请检查地址和网络后重试"
         case .apiVersionMismatch(let client, let server):
             "客户端接口版本为 \(client)，服务器接口版本为 \(server)，请升级 ReadBoard Go 或服务端"
@@ -115,14 +119,15 @@ public enum ReadBoardGoConnectionError: LocalizedError {
         }
         if certificateWasPinned {
             switch urlError.code {
-            case .cancelled, .secureConnectionFailed,
-                 .serverCertificateHasBadDate, .serverCertificateUntrusted,
-                 .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid,
-                 .clientCertificateRejected, .clientCertificateRequired:
+            case .serverCertificateHasBadDate, .serverCertificateUntrusted,
+                 .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid:
                 return ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription
             default:
                 break
             }
+        }
+        if urlError.code == .cancelled {
+            return ReadBoardGoConnectionError.requestCancelled.localizedDescription
         }
         return networkFailure(from: urlError).localizedDescription
     }

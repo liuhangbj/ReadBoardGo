@@ -122,17 +122,18 @@ public final class ReadBoardGoSession {
             guard let trustCandidate else {
                 throw ReadBoardGoConnectionError.certificateNotTrusted
             }
-            let session = PinnedHTTPS.session(
+            let loader = PinnedHTTPS.client(
+                baseURL: trustCandidate.baseURL,
                 certificateFingerprint: trustCandidate.certificateFingerprint)
             let credential = try await RemotePasswordLoginClient.login(
                 baseURL: trustCandidate.baseURL, password: password,
-                deviceName: deviceName, session: session)
+                deviceName: deviceName, loader: loader)
             try validateAPIVersion(credential.apiVersion)
             let value = StoredServerConnection(baseURL: trustCandidate.baseURL,
                 credential: credential,
                 certificateFingerprint: trustCandidate.certificateFingerprint)
             let profile = try await ReadBoardHTTPClient(baseURL: trustCandidate.baseURL,
-                bearerToken: credential.token, session: session).profile()
+                bearerToken: credential.token, loader: loader).profile()
             try validateAPIVersion(profile.apiVersion)
             try store.save(value)
             connection = value
@@ -161,17 +162,18 @@ public final class ReadBoardGoSession {
             }
             let pairingCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !pairingCode.isEmpty else { throw ReadBoardGoConnectionError.emptyPairingCode }
-            let session = PinnedHTTPS.session(
+            let loader = PinnedHTTPS.client(
+                baseURL: trustCandidate.baseURL,
                 certificateFingerprint: trustCandidate.certificateFingerprint)
             let credential = try await RemotePairingClient.pair(
                 baseURL: trustCandidate.baseURL, code: pairingCode,
-                deviceName: deviceName, session: session)
+                deviceName: deviceName, loader: loader)
             try validateAPIVersion(credential.apiVersion)
             let value = StoredServerConnection(baseURL: trustCandidate.baseURL,
                 credential: credential,
                 certificateFingerprint: trustCandidate.certificateFingerprint)
             let profile = try await ReadBoardHTTPClient(baseURL: trustCandidate.baseURL,
-                bearerToken: credential.token, session: session).profile()
+                bearerToken: credential.token, loader: loader).profile()
             try validateAPIVersion(profile.apiVersion)
             try store.save(value)
             connection = value
@@ -211,6 +213,8 @@ public final class ReadBoardGoSession {
             self.connection = upgraded
             errorMessage = nil
             await flushPendingInboxImports()
+        } catch is CancellationError {
+            return
         } catch {
             let cachedProfile = await offlineCache.profile()
             profile = cachedProfile
@@ -321,7 +325,9 @@ public final class ReadBoardGoSession {
         let fingerprint = connection.certificateFingerprint ?? ""
         return ReadBoardHTTPClient(baseURL: connection.baseURL,
             bearerToken: connection.token,
-            session: PinnedHTTPS.session(certificateFingerprint: fingerprint),
+            loader: PinnedHTTPS.client(
+                baseURL: connection.baseURL,
+                certificateFingerprint: fingerprint),
             eventHandler: { [weak remoteHealth, weak self] event in
                 Task { @MainActor in
                     remoteHealth?.receive(event)

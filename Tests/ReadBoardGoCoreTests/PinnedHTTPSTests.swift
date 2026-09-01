@@ -1,4 +1,5 @@
 import Foundation
+import ReadBoardContract
 import XCTest
 @testable import ReadBoardGoCore
 
@@ -38,22 +39,145 @@ final class PinnedHTTPSTests: XCTestCase {
         }
     }
 
-    func testPinnedTLSFailureIsReportedAsCertificateChange() {
-        let tlsCodes: [URLError.Code] = [
-            .cancelled,
-            .secureConnectionFailed,
-            .serverCertificateUntrusted,
-        ]
-        for code in tlsCodes {
-            XCTAssertEqual(
-                ReadBoardGoConnectionError.userFacingDescription(
-                    for: URLError(code), certificateWasPinned: true),
-                "服务器证书未受信任或已发生变化")
-        }
+    func testPinnedCancellationIsNotReportedAsCertificateChange() {
+        XCTAssertEqual(
+            ReadBoardGoConnectionError.userFacingDescription(
+                for: URLError(.cancelled), certificateWasPinned: true),
+            "连接请求被系统取消，请检查代理或 VPN 后重试")
         XCTAssertEqual(
             ReadBoardGoConnectionError.userFacingDescription(
                 for: URLError(.timedOut), certificateWasPinned: true),
             "连接服务器超时，请检查网络和端口转发")
+        XCTAssertEqual(
+            ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription,
+            "服务器证书未受信任或已发生变化")
+    }
+
+    func testPinnedClientRetriesOnlyUnownedCancellationOnce() {
+        XCTAssertTrue(PinnedHTTPSClient.shouldRetry(
+            error: URLError(.cancelled), taskIsCancelled: false))
+        XCTAssertFalse(PinnedHTTPSClient.shouldRetry(
+            error: URLError(.cancelled), taskIsCancelled: true))
+        XCTAssertFalse(PinnedHTTPSClient.shouldRetry(
+            error: URLError(.timedOut), taskIsCancelled: false))
+        XCTAssertTrue(PinnedHTTPSClient.normalized(
+            error: URLError(.cancelled), taskIsCancelled: true) is CancellationError)
+        XCTAssertEqual(
+            PinnedHTTPSClient.normalized(
+                error: URLError(.cancelled), taskIsCancelled: false).localizedDescription,
+            "连接请求被系统取消，请检查代理或 VPN 后重试")
+    }
+
+    func testPinnedClientRebuildsOnceAfterTransientCancellation() async throws {
+        let attempt = try await PinnedHTTPSClient.retryCancelledOnce(
+            allowsRetry: true) { attempt in
+            if attempt == 0 { throw URLError(.cancelled) }
+            return attempt
+        }
+        XCTAssertEqual(attempt, 1)
+
+        do {
+            _ = try await PinnedHTTPSClient.retryCancelledOnce(
+                allowsRetry: true) { _ -> Int in
+                throw URLError(.cancelled)
+            }
+            XCTFail("连续取消不得无限重试")
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "连接请求被系统取消，请检查代理或 VPN 后重试")
+        }
+    }
+
+    func testPinnedClientNeverRetriesLoginOrOtherWriteRequests() async {
+        var post = URLRequest(url: URL(string: "https://reader.example.com/api/v1/login")!)
+        post.httpMethod = "POST"
+        XCTAssertFalse(PinnedHTTPSClient.isRetrySafe(post))
+        XCTAssertTrue(PinnedHTTPSClient.isRetrySafe(
+            URLRequest(url: URL(string: "https://reader.example.com/api/v1/server/profile")!)))
+
+        do {
+            _ = try await PinnedHTTPSClient.retryCancelledOnce(
+                allowsRetry: false) { attempt -> Int in
+                if attempt > 0 { XCTFail("写请求不得进入第二次尝试") }
+                throw URLError(.cancelled)
+            }
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "连接请求被系统取消，请检查代理或 VPN 后重试")
+        }
+    }
+
+    func testPinnedClientDataCallsPostOnceAndSafeReadTwiceOnCancellation() async throws {
+        let baseURL = try XCTUnwrap(URL(string: "https://reader.example.com:7331"))
+
+        let postCounter = PinnedAttemptCounter()
+        let postClient = PinnedHTTPSClient(baseURL: baseURL) {
+            AlwaysCancelledPinnedChannel(counter: postCounter)
+        }
+        var post = URLRequest(url: try XCTUnwrap(
+            URL(string: "api/v1/login", relativeTo: baseURL)))
+        post.httpMethod = "POST"
+        do {
+            _ = try await postClient.data(for: post)
+            XCTFail("取消的登录请求应失败")
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "连接请求被系统取消，请检查代理或 VPN 后重试")
+        }
+        XCTAssertEqual(await postCounter.value(), 1)
+
+        let getCounter = PinnedAttemptCounter()
+        let getClient = PinnedHTTPSClient(baseURL: baseURL) {
+            AlwaysCancelledPinnedChannel(counter: getCounter)
+        }
+        let profile = URLRequest(url: try XCTUnwrap(
+            URL(string: "api/v1/server/profile", relativeTo: baseURL)))
+        do {
+            _ = try await getClient.data(for: profile)
+            XCTFail("连续两次取消的 profile 应失败")
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "连接请求被系统取消，请检查代理或 VPN 后重试")
+        }
+        XCTAssertEqual(await getCounter.value(), 2)
+    }
+
+    func testPinnedClientRejectsCrossOriginBeforeSendingRequest() async throws {
+        let baseURL = try XCTUnwrap(URL(string: "https://reader.example.com:7331"))
+        let client = PinnedHTTPS.client(
+            baseURL: baseURL,
+            certificateFingerprint: String(repeating: "a", count: 64))
+        let request = URLRequest(url: try XCTUnwrap(URL(string: "https://evil.example.com/")))
+        do {
+            _ = try await client.data(for: request)
+            XCTFail("跨域请求不应进入固定证书会话")
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "服务器返回了不安全的跨域跳转，连接已停止")
+        }
+    }
+
+    func testPinnedClientClassifiesCrossOriginRedirectPerRequest() async throws {
+        let baseURL = try XCTUnwrap(URL(string: "https://reader.example.com:7331"))
+        let recorder = PinnedRequestRecorder()
+        let channel = RedirectingPinnedChannel(recorder: recorder)
+        let client = PinnedHTTPSClient(baseURL: baseURL) { channel }
+
+        let redirect = URLRequest(url: try XCTUnwrap(
+            URL(string: "redirect", relativeTo: baseURL)))
+        do {
+            _ = try await client.data(for: redirect)
+            XCTFail("跨域跳转应按当前请求拒绝")
+        } catch {
+            XCTAssertEqual(error.localizedDescription,
+                           "服务器返回了不安全的跨域跳转，连接已停止")
+        }
+
+        let ok = URLRequest(url: try XCTUnwrap(URL(string: "ok", relativeTo: baseURL)))
+        let (_, response) = try await client.data(for: ok)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+        let paths = await recorder.paths()
+        XCTAssertEqual(paths, ["/redirect", "/ok"])
     }
 
     @MainActor
@@ -100,19 +224,39 @@ final class PinnedHTTPSTests: XCTestCase {
         let fingerprint = try XCTUnwrap(fingerprints.first)
         XCTAssertEqual(fingerprint.count, 64)
 
-        let accepted = PinnedHTTPS.session(certificateFingerprint: fingerprint)
+        let accepted = PinnedHTTPS.client(
+            baseURL: baseURL, certificateFingerprint: fingerprint)
         let healthURL = try XCTUnwrap(URL(string: "health", relativeTo: baseURL))
-        let (data, response) = try await accepted.data(from: healthURL)
+        let (data, response) = try await accepted.data(for: URLRequest(url: healthURL))
         XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
         XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("apiVersion"))
 
-        let rejected = PinnedHTTPS.session(
+        let loginURL = try XCTUnwrap(URL(string: "api/v1/login", relativeTo: baseURL))
+        var malformedLogin = URLRequest(url: loginURL)
+        malformedLogin.httpMethod = "POST"
+        malformedLogin.setValue(ReadBoardRemoteAPI.version,
+                                forHTTPHeaderField: ReadBoardRemoteAPI.versionHeader)
+        malformedLogin.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        malformedLogin.httpBody = Data("{}".utf8)
+        let (_, loginResponse) = try await accepted.data(for: malformedLogin)
+        XCTAssertEqual((loginResponse as? HTTPURLResponse)?.statusCode, 400)
+
+        let profileURL = try XCTUnwrap(
+            URL(string: "api/v1/server/profile", relativeTo: baseURL))
+        var profileRequest = URLRequest(url: profileURL)
+        profileRequest.setValue(ReadBoardRemoteAPI.version,
+                                forHTTPHeaderField: ReadBoardRemoteAPI.versionHeader)
+        let (_, profileResponse) = try await accepted.data(for: profileRequest)
+        XCTAssertEqual((profileResponse as? HTTPURLResponse)?.statusCode, 401)
+
+        let rejected = PinnedHTTPS.client(
+            baseURL: baseURL,
             certificateFingerprint: String(repeating: "0", count: 64))
         do {
-            _ = try await rejected.data(from: healthURL)
+            _ = try await rejected.data(for: URLRequest(url: healthURL))
             XCTFail("错误证书指纹不应读取服务器响应")
         } catch {
-            XCTAssertNotNil(error as? URLError)
+            XCTAssertEqual(error.localizedDescription, "服务器证书未受信任或已发生变化")
         }
     }
 }
@@ -121,4 +265,48 @@ private struct EmptyConnectionStore: ConnectionStoring {
     func load() throws -> StoredServerConnection? { nil }
     func save(_ connection: StoredServerConnection) throws {}
     func delete() throws {}
+}
+
+private actor PinnedAttemptCounter {
+    private var count = 0
+    func record() { count += 1 }
+    func value() -> Int { count }
+}
+
+private struct AlwaysCancelledPinnedChannel: PinnedHTTPSChannelLoading {
+    let counter: PinnedAttemptCounter
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        await counter.record()
+        throw URLError(.cancelled)
+    }
+}
+
+private actor PinnedRequestRecorder {
+    private var recordedPaths: [String] = []
+    func record(_ path: String) { recordedPaths.append(path) }
+    func paths() -> [String] { recordedPaths }
+}
+
+private struct RedirectingPinnedChannel: PinnedHTTPSChannelLoading {
+    let recorder: PinnedRequestRecorder
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        let url = request.url!
+        await recorder.record(url.path)
+        if url.path == "/redirect" {
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 302,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Location": "https://evil.example.com/target"])!
+            return (Data(), response)
+        }
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil)!
+        return (Data(), response)
+    }
 }

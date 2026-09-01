@@ -38,6 +38,13 @@ ditto "$BUILT_APP" "$STAGED_APP"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" \
   "$STAGED_APP/Contents/Info.plist"
 
+while IFS= read -r -d '' EXTENSION_PLIST; do
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" \
+    "$EXTENSION_PLIST"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" \
+    "$EXTENSION_PLIST"
+done < <(find "$STAGED_APP/Contents/PlugIns" -type f -path '*/Contents/Info.plist' -print0)
+
 codesign --deep --force --sign - "$STAGED_APP"
 codesign --verify --deep --strict "$STAGED_APP"
 
