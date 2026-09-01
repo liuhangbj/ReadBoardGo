@@ -4,7 +4,7 @@ import PackageDescription
 
 let configuredCorePath = ProcessInfo.processInfo.environment["READBOARD_CORE_PATH"]
 let coreRevision = ProcessInfo.processInfo.environment["READBOARD_CORE_REF"]
-    ?? "4cedb210782708fd59adce241523ae46a8280ce6"
+    ?? "bec12587fd8b01e4769c523b8cb5c7f68480dbcd"
 let hasLocalCore = configuredCorePath.map { path in
     FileManager.default.fileExists(
         atPath: URL(fileURLWithPath: path)

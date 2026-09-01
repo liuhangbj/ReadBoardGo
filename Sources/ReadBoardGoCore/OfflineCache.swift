@@ -119,9 +119,9 @@ public actor ReadBoardGoOfflineCache {
         }
         // 旧版本使用未排序的 JSON 作为键。升级后仍按解码出的查询语义匹配，
         // 这样用户断连时不会因为键格式变化丢失最后有效列表。
-        return envelope.pages.first { key, _ in
-            decodedQuery(from: key) == query
-        }?.value.value
+        return envelope.pages.compactMap { key, record in
+            decodedQuery(from: key) == query ? record : nil
+        }.max(by: { $0.updatedAt < $1.updatedAt })?.value
     }
 
     public func storeDetail(_ value: ContentDetail) {

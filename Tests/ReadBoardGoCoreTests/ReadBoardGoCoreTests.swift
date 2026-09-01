@@ -230,6 +230,60 @@ final class ReadBoardGoCoreTests: XCTestCase {
         XCTAssertEqual(switchedStatus.pendingReadingMutations, 0)
     }
 
+    func testOfflineCacheReadsLegacyUnsortedQueryKeyAfterRestart() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = directory.appendingPathComponent("offline-cache.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let query = ContentQuery(
+            filter: ContentFilter(category: .article, sourceFamily: .social),
+            sort: .oldest,
+            pageSize: 25,
+            cursor: "next-page")
+        let item = socialSummary(
+            id: 91, contentType: "article", source: "xiaohongshu", sourceID: 9)
+        let cache = ReadBoardGoOfflineCache(fileURL: fileURL)
+        await cache.storePage(ContentPage(items: [item], nextCursor: nil), query: query)
+
+        var root = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: fileURL)) as? [String: Any])
+        var pages = try XCTUnwrap(root["pages"] as? [String: Any])
+        let canonicalKey = try XCTUnwrap(pages.keys.first)
+        let record = try XCTUnwrap(pages.removeValue(forKey: canonicalKey))
+        let canonicalData = try XCTUnwrap(Data(base64Encoded: canonicalKey))
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: canonicalData) as? [String: Any])
+
+        func fragment(_ value: Any) throws -> String {
+            let data = try JSONSerialization.data(withJSONObject: [value])
+            let wrapped = String(decoding: data, as: UTF8.self)
+            return String(wrapped.dropFirst().dropLast())
+        }
+
+        let sort = try fragment(try XCTUnwrap(object["sort"]))
+        let pageSize = try fragment(try XCTUnwrap(object["pageSize"]))
+        var fields = ["\"sort\":\(sort)", "\"pageSize\":\(pageSize)"]
+        if let cursor = object["cursor"] {
+            fields.append("\"cursor\":\(try fragment(cursor))")
+        }
+        let filter = try fragment(try XCTUnwrap(object["filter"]))
+        fields.append("\"filter\":\(filter)")
+        let legacyData = Data("{\(fields.joined(separator: ","))}".utf8)
+        XCTAssertEqual(try JSONDecoder().decode(ContentQuery.self, from: legacyData), query)
+        let legacyKey = legacyData.base64EncodedString()
+        XCTAssertNotEqual(legacyKey, canonicalKey)
+
+        pages[legacyKey] = record
+        root["pages"] = pages
+        let rewritten = try JSONSerialization.data(withJSONObject: root, options: [.sortedKeys])
+        try rewritten.write(to: fileURL, options: .atomic)
+
+        let restored = ReadBoardGoOfflineCache(fileURL: fileURL)
+        let restoredPage = await restored.page(query: query)
+        XCTAssertEqual(try XCTUnwrap(restoredPage).items, [item])
+    }
+
     func testOfflineReadMutationKeepsSocialPagesAndNavigationCountsInSync() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
