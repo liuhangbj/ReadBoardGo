@@ -36,6 +36,13 @@ jobs:
           [[ "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
           script/verify_core_ref.sh
 
+      - name: Require signing and notarization credentials
+        if: env.HAS_SIGNING_CREDENTIALS != 'true'
+        shell: bash
+        run: |
+          echo "Developer ID and Apple notarization credentials are required for a release" >&2
+          exit 1
+
       - name: Test
         env:
           READBOARD_CORE_PATH: ${{ runner.temp }}/no-local-core
