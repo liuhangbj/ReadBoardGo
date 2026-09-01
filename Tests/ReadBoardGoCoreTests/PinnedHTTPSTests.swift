@@ -124,7 +124,8 @@ final class PinnedHTTPSTests: XCTestCase {
             XCTAssertEqual(error.localizedDescription,
                            "连接请求被系统取消，请检查代理或 VPN 后重试")
         }
-        XCTAssertEqual(await postCounter.value(), 1)
+        let postAttempts = await postCounter.value()
+        XCTAssertEqual(postAttempts, 1)
 
         let getCounter = PinnedAttemptCounter()
         let getClient = PinnedHTTPSClient(baseURL: baseURL) {
@@ -139,7 +140,8 @@ final class PinnedHTTPSTests: XCTestCase {
             XCTAssertEqual(error.localizedDescription,
                            "连接请求被系统取消，请检查代理或 VPN 后重试")
         }
-        XCTAssertEqual(await getCounter.value(), 2)
+        let getAttempts = await getCounter.value()
+        XCTAssertEqual(getAttempts, 2)
     }
 
     func testPinnedClientRejectsCrossOriginBeforeSendingRequest() async throws {
