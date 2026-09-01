@@ -44,7 +44,13 @@ public actor ReadBoardGoOfflineCache {
 
     private let fileURL: URL
     private var envelope: Envelope
-    private let encoder = JSONEncoder()
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        // 缓存键必须由查询语义而不是 JSON 对象字段的偶发输出顺序决定。
+        // sortedKeys 让同一个 ContentQuery 在保存、读取和重启后始终得到同一键。
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }()
     private let decoder = JSONDecoder()
 
     public init(fileURL: URL? = nil) {
@@ -108,7 +114,14 @@ public actor ReadBoardGoOfflineCache {
     }
 
     public func page(query: ContentQuery) -> ContentPage? {
-        envelope.pages[queryKey(query)]?.value
+        if let exact = envelope.pages[queryKey(query)]?.value {
+            return exact
+        }
+        // 旧版本使用未排序的 JSON 作为键。升级后仍按解码出的查询语义匹配，
+        // 这样用户断连时不会因为键格式变化丢失最后有效列表。
+        return envelope.pages.first { key, _ in
+            decodedQuery(from: key) == query
+        }?.value.value
     }
 
     public func storeDetail(_ value: ContentDetail) {
@@ -168,8 +181,7 @@ public actor ReadBoardGoOfflineCache {
     private func cachedAsInbox(contentID: Int64) -> Bool {
         for (key, record) in envelope.pages {
             guard record.value.items.contains(where: { $0.id == contentID }),
-                  let data = Data(base64Encoded: key),
-                  let query = try? decoder.decode(ContentQuery.self, from: data)
+                  let query = decodedQuery(from: key)
             else { continue }
             if query.filter.inboxOnly == true { return true }
         }
@@ -326,6 +338,11 @@ public actor ReadBoardGoOfflineCache {
 
     private func queryKey(_ query: ContentQuery) -> String {
         ((try? encoder.encode(query)) ?? Data()).base64EncodedString()
+    }
+
+    private func decodedQuery(from key: String) -> ContentQuery? {
+        guard let data = Data(base64Encoded: key) else { return nil }
+        return try? decoder.decode(ContentQuery.self, from: data)
     }
 
     private func trimPages() {
