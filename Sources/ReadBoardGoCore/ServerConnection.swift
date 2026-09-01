@@ -51,6 +51,12 @@ public enum ReadBoardGoConnectionError: LocalizedError {
     case tlsRequired
     case certificateUnavailable
     case certificateNotTrusted
+    case serverNotFound
+    case serverUnavailable
+    case connectionTimedOut
+    case networkUnavailable
+    case secureConnectionFailed
+    case connectionFailed
     case apiVersionMismatch(client: String, server: String)
 
     public var errorDescription: String? {
@@ -61,9 +67,64 @@ public enum ReadBoardGoConnectionError: LocalizedError {
         case .tlsRequired: "ReadBoard Go 只允许通过 HTTPS 连接"
         case .certificateUnavailable: "无法读取服务器 TLS 证书"
         case .certificateNotTrusted: "服务器证书未受信任或已发生变化"
+        case .serverNotFound: "找不到服务器，请检查动态域名或服务器地址"
+        case .serverUnavailable: "无法连接服务器，请确认远程访问已开启且端口可达"
+        case .connectionTimedOut: "连接服务器超时，请检查网络和端口转发"
+        case .networkUnavailable: "网络连接不可用，请检查网络后重试"
+        case .secureConnectionFailed: "无法建立 TLS 安全连接，请检查代理、服务器地址或证书"
+        case .connectionFailed: "连接服务器失败，请检查地址和网络后重试"
         case .apiVersionMismatch(let client, let server):
             "客户端接口版本为 \(client)，服务器接口版本为 \(server)，请升级 ReadBoard Go 或服务端"
         }
+    }
+
+    static func networkFailure(from error: any Error) -> ReadBoardGoConnectionError {
+        if let connectionError = error as? ReadBoardGoConnectionError {
+            return connectionError
+        }
+        guard let urlError = error as? URLError else { return .connectionFailed }
+        switch urlError.code {
+        case .cannotFindHost, .dnsLookupFailed:
+            return .serverNotFound
+        case .cannotConnectToHost:
+            return .serverUnavailable
+        case .timedOut:
+            return .connectionTimedOut
+        case .notConnectedToInternet, .networkConnectionLost,
+             .internationalRoamingOff, .dataNotAllowed:
+            return .networkUnavailable
+        case .secureConnectionFailed, .serverCertificateHasBadDate,
+             .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
+             .serverCertificateNotYetValid, .clientCertificateRejected,
+             .clientCertificateRequired:
+            return .secureConnectionFailed
+        default:
+            return .connectionFailed
+        }
+    }
+
+    static func userFacingDescription(
+        for error: any Error,
+        certificateWasPinned: Bool = false
+    ) -> String {
+        if let connectionError = error as? ReadBoardGoConnectionError {
+            return connectionError.localizedDescription
+        }
+        guard let urlError = error as? URLError else {
+            return error.localizedDescription
+        }
+        if certificateWasPinned {
+            switch urlError.code {
+            case .cancelled, .secureConnectionFailed,
+                 .serverCertificateHasBadDate, .serverCertificateUntrusted,
+                 .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid,
+                 .clientCertificateRejected, .clientCertificateRequired:
+                return ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription
+            default:
+                break
+            }
+        }
+        return networkFailure(from: urlError).localizedDescription
     }
 }
 
@@ -74,10 +135,10 @@ public enum ServerAddressNormalizer {
         if !value.contains("://") { value = "https://" + value }
         guard var components = URLComponents(string: value),
               let scheme = components.scheme?.lowercased(),
-              scheme == "https",
               components.host != nil else {
             throw ReadBoardGoConnectionError.invalidServerAddress
         }
+        guard scheme == "https" else { throw ReadBoardGoConnectionError.tlsRequired }
         components.scheme = scheme
         components.path = "/"
         components.query = nil

@@ -22,15 +22,21 @@ public final class ReadBoardGoSession {
     private let store: any ConnectionStoring
     private let offlineCache: ReadBoardGoOfflineCache
     private let pendingInboxStore: PendingInboxImportStore
+    private let certificateInspector: @Sendable (URL) async throws -> String
     private var isFlushingInboxImports = false
+    private var serverInspectionID: UUID?
 
     public init(
         store: any ConnectionStoring = DefaultConnectionStore(),
-        offlineCache: ReadBoardGoOfflineCache = ReadBoardGoOfflineCache()
+        offlineCache: ReadBoardGoOfflineCache = ReadBoardGoOfflineCache(),
+        certificateInspector: @escaping @Sendable (URL) async throws -> String = {
+            try await PinnedHTTPS.inspectCertificate(at: $0)
+        }
     ) {
         self.store = store
         self.offlineCache = offlineCache
         self.pendingInboxStore = PendingInboxImportStore()
+        self.certificateInspector = certificateInspector
         self.pendingInboxImportCount = pendingInboxStore.load().count
         do {
             let stored = try store.load()
@@ -69,28 +75,41 @@ public final class ReadBoardGoSession {
 
     public func select(_ server: DiscoveredReadBoardServer) {
         guard let baseURL = server.baseURLs.first else { return }
+        serverInspectionID = nil
+        isWorking = false
         trustCandidate = ServerTrustCandidate(name: server.name, baseURL: baseURL,
             certificateFingerprint: server.certificateFingerprint)
         errorMessage = nil
     }
 
     public func inspectServer(address: String) async {
+        let inspectionID = UUID()
+        serverInspectionID = inspectionID
         isWorking = true
         errorMessage = nil
-        defer { isWorking = false }
+        defer {
+            if serverInspectionID == inspectionID {
+                serverInspectionID = nil
+                isWorking = false
+            }
+        }
         do {
             let baseURL = try ServerAddressNormalizer.normalize(address)
-            let fingerprint = try await PinnedHTTPS.inspectCertificate(at: baseURL)
+            let fingerprint = try await certificateInspector(baseURL)
+            guard serverInspectionID == inspectionID, !Task.isCancelled else { return }
             trustCandidate = ServerTrustCandidate(name: baseURL.host ?? "ReadBoard",
                 baseURL: baseURL, certificateFingerprint: fingerprint)
         } catch is CancellationError {
             return
         } catch {
-            errorMessage = error.localizedDescription
+            guard serverInspectionID == inspectionID else { return }
+            errorMessage = ReadBoardGoConnectionError.userFacingDescription(for: error)
         }
     }
 
     public func cancelTrustCandidate() {
+        serverInspectionID = nil
+        isWorking = false
         trustCandidate = nil
         errorMessage = nil
     }
@@ -127,7 +146,8 @@ public final class ReadBoardGoSession {
         } catch is CancellationError {
             return
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ReadBoardGoConnectionError.userFacingDescription(
+                for: error, certificateWasPinned: true)
         }
     }
 
@@ -165,7 +185,8 @@ public final class ReadBoardGoSession {
         } catch is CancellationError {
             return
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ReadBoardGoConnectionError.userFacingDescription(
+                for: error, certificateWasPinned: true)
         }
     }
 
@@ -205,7 +226,8 @@ public final class ReadBoardGoSession {
                     kind: .version,
                     message: error.localizedDescription))
             }
-            errorMessage = error.localizedDescription
+            errorMessage = ReadBoardGoConnectionError.userFacingDescription(
+                for: error, certificateWasPinned: true)
         }
     }
 

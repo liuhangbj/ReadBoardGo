@@ -25,6 +25,26 @@ public enum PinnedHTTPS {
     static func normalized(_ value: String) -> String {
         value.lowercased().filter { $0.isHexDigit }
     }
+
+    /// Certificate inspection intentionally cancels the unauthenticated probe
+    /// after observing server trust. URLSession may report that cancellation
+    /// before the challenge callback resumes its continuation, so the observed
+    /// fingerprint is the authority for that completion ordering.
+    static func probeCompletionResult(
+        observedFingerprint: String?,
+        error: (any Error)?
+    ) -> Result<String, any Error> {
+        if let observedFingerprint, !observedFingerprint.isEmpty {
+            return .success(observedFingerprint)
+        }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            return .failure(CancellationError())
+        }
+        if let error {
+            return .failure(ReadBoardGoConnectionError.networkFailure(from: error))
+        }
+        return .failure(ReadBoardGoConnectionError.certificateUnavailable)
+    }
 }
 
 private final class PinnedCertificateDelegate: NSObject, URLSessionDelegate,
@@ -56,6 +76,7 @@ private final class TLSCertificateProbe: NSObject, URLSessionDelegate, @unchecke
     private var continuation: CheckedContinuation<String, any Error>?
     private var session: URLSession?
     private var finished = false
+    private var observedFingerprint: String?
 
     func inspect(baseURL: URL) async throws -> String {
         guard baseURL.scheme?.lowercased() == "https" else {
@@ -73,7 +94,10 @@ private final class TLSCertificateProbe: NSObject, URLSessionDelegate, @unchecke
             self.session = session
             let url = URL(string: "health", relativeTo: baseURL) ?? baseURL
             session.dataTask(with: url) { [weak self] _, _, error in
-                if let error { self?.complete(.failure(error)) }
+                guard let self else { return }
+                self.complete(PinnedHTTPS.probeCompletionResult(
+                    observedFingerprint: self.currentObservedFingerprint(),
+                    error: error))
             }.resume()
         }
     }
@@ -90,8 +114,22 @@ private final class TLSCertificateProbe: NSObject, URLSessionDelegate, @unchecke
             complete(.failure(ReadBoardGoConnectionError.certificateUnavailable))
             return
         }
+        recordObservedFingerprint(fingerprint)
         completionHandler(.cancelAuthenticationChallenge, nil)
         complete(.success(fingerprint))
+    }
+
+    private func recordObservedFingerprint(_ fingerprint: String) {
+        lock.lock()
+        if !finished { observedFingerprint = fingerprint }
+        lock.unlock()
+    }
+
+    private func currentObservedFingerprint() -> String? {
+        lock.lock()
+        let value = observedFingerprint
+        lock.unlock()
+        return value
     }
 
     private func complete(_ result: Result<String, any Error>) {
