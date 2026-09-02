@@ -19,13 +19,12 @@ final class PinnedHTTPSTests: XCTestCase {
         let resolvedTrust = try XCTUnwrap(trust)
         let fingerprint = try XCTUnwrap(PinnedHTTPS.fingerprint(trust: resolvedTrust))
 
-        let acceptedCredential = PinnedHTTPS.credential(
+        let acceptedTrust = PinnedHTTPS.pinnedTrust(
             for: resolvedTrust,
             expectedFingerprint: fingerprint
         )
-        switch acceptedCredential {
-        case .success(let credential):
-            let pinnedTrust = try XCTUnwrap(credential.trust)
+        switch acceptedTrust {
+        case .success(let pinnedTrust):
             XCTAssertFalse(pinnedTrust === resolvedTrust,
                            "固定证书凭据不得复用带主机名策略的原始 trust")
             var trustError: CFError?

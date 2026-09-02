@@ -48,6 +48,18 @@ public enum PinnedHTTPS {
         for trust: SecTrust,
         expectedFingerprint: String
     ) -> Result<URLCredential, ReadBoardGoConnectionError> {
+        switch pinnedTrust(for: trust, expectedFingerprint: expectedFingerprint) {
+        case .success(let pinnedTrust):
+            return .success(URLCredential(trust: pinnedTrust))
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    static func pinnedTrust(
+        for trust: SecTrust,
+        expectedFingerprint: String
+    ) -> Result<SecTrust, ReadBoardGoConnectionError> {
         guard let certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
               let leaf = certificates.first,
               let fingerprint = fingerprint(trust: trust) else {
@@ -74,7 +86,7 @@ public enum PinnedHTTPS {
         guard SecTrustEvaluateWithError(pinnedTrust, &evaluationError) else {
             return .failure(.certificateNotTrusted)
         }
-        return .success(URLCredential(trust: pinnedTrust))
+        return .success(pinnedTrust)
     }
 
     /// Certificate inspection intentionally cancels the unauthenticated probe
