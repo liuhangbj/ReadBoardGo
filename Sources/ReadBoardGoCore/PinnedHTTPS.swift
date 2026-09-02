@@ -38,10 +38,12 @@ public enum PinnedHTTPS {
     }
 
     /// Certificate pinning is the server identity check. Once the exact leaf
-    /// fingerprint matches, evaluate that leaf as the only trust anchor with a
-    /// basic X.509 policy instead of asking the public PKI to also validate the
-    /// dynamic hostname. This keeps self-signed ReadBoard certificates working
-    /// consistently on macOS 14 while preserving date/signature validation.
+    /// fingerprint matches, build a fresh trust object that evaluates that leaf
+    /// as the only trust anchor with a basic X.509 policy. Reusing the trust
+    /// supplied by URLSession is not sufficient on older macOS releases because
+    /// that object was created with an SSL hostname policy and may retain the
+    /// original policy context even after it is mutated. A fresh trust removes
+    /// only hostname validation while preserving date and signature validation.
     static func credential(
         for trust: SecTrust,
         expectedFingerprint: String
@@ -55,20 +57,24 @@ public enum PinnedHTTPS {
             return .failure(.certificateNotTrusted)
         }
 
-        let policyStatus = SecTrustSetPolicies(trust, SecPolicyCreateBasicX509())
-        guard policyStatus == errSecSuccess else {
+        var pinnedTrust: SecTrust?
+        let trustStatus = SecTrustCreateWithCertificates(
+            leaf,
+            SecPolicyCreateBasicX509(),
+            &pinnedTrust)
+        guard trustStatus == errSecSuccess, let pinnedTrust else {
             return .failure(.certificateUnavailable)
         }
-        let anchorStatus = SecTrustSetAnchorCertificates(trust, [leaf] as CFArray)
+        let anchorStatus = SecTrustSetAnchorCertificates(pinnedTrust, [leaf] as CFArray)
         guard anchorStatus == errSecSuccess,
-              SecTrustSetAnchorCertificatesOnly(trust, true) == errSecSuccess else {
+              SecTrustSetAnchorCertificatesOnly(pinnedTrust, true) == errSecSuccess else {
             return .failure(.certificateUnavailable)
         }
         var evaluationError: CFError?
-        guard SecTrustEvaluateWithError(trust, &evaluationError) else {
+        guard SecTrustEvaluateWithError(pinnedTrust, &evaluationError) else {
             return .failure(.certificateNotTrusted)
         }
-        return .success(URLCredential(trust: trust))
+        return .success(URLCredential(trust: pinnedTrust))
     }
 
     /// Certificate inspection intentionally cancels the unauthenticated probe

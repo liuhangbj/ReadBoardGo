@@ -19,12 +19,24 @@ final class PinnedHTTPSTests: XCTestCase {
         let resolvedTrust = try XCTUnwrap(trust)
         let fingerprint = try XCTUnwrap(PinnedHTTPS.fingerprint(trust: resolvedTrust))
 
-        switch PinnedHTTPS.credential(
+        let acceptedCredential = PinnedHTTPS.credential(
             for: resolvedTrust,
             expectedFingerprint: fingerprint
-        ) {
-        case .success:
-            break
+        )
+        switch acceptedCredential {
+        case .success(let credential):
+            let pinnedTrust = try XCTUnwrap(credential.trust)
+            XCTAssertFalse(pinnedTrust === resolvedTrust,
+                           "固定证书凭据不得复用带主机名策略的原始 trust")
+            var trustError: CFError?
+            XCTAssertTrue(SecTrustEvaluateWithError(pinnedTrust, &trustError))
+
+            XCTAssertEqual(SecTrustSetVerifyDate(
+                pinnedTrust,
+                Date(timeIntervalSince1970: 2_208_988_800) as CFDate), errSecSuccess)
+            trustError = nil
+            XCTAssertFalse(SecTrustEvaluateWithError(pinnedTrust, &trustError),
+                           "Basic X.509 trust 仍必须拒绝超过有效期的固定证书")
         case .failure(let error):
             XCTFail("精确固定的自签名证书应建立凭据：\(error)")
         }
@@ -35,6 +47,33 @@ final class PinnedHTTPSTests: XCTestCase {
         ) {
         case .success:
             XCTFail("错误证书指纹不得建立凭据")
+        case .failure(let error):
+            XCTAssertEqual(error.localizedDescription,
+                           ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription)
+        }
+    }
+
+    func testExactPinStillRejectsCertificateWithDamagedSignature() throws {
+        var certificateData = try XCTUnwrap(Data(
+            base64Encoded: Self.selfSignedCertificateDER,
+            options: .ignoreUnknownCharacters))
+        certificateData[certificateData.index(before: certificateData.endIndex)] ^= 0x01
+        let certificate = try XCTUnwrap(SecCertificateCreateWithData(
+            nil, certificateData as CFData))
+        var trust: SecTrust?
+        XCTAssertEqual(SecTrustCreateWithCertificates(
+            certificate,
+            SecPolicyCreateSSL(true, "reader.example.com" as CFString),
+            &trust), errSecSuccess)
+        let resolvedTrust = try XCTUnwrap(trust)
+        let fingerprint = try XCTUnwrap(PinnedHTTPS.fingerprint(trust: resolvedTrust))
+
+        switch PinnedHTTPS.credential(
+            for: resolvedTrust,
+            expectedFingerprint: fingerprint
+        ) {
+        case .success:
+            XCTFail("即使指纹匹配，签名损坏的证书也不得建立凭据")
         case .failure(let error):
             XCTAssertEqual(error.localizedDescription,
                            ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription)
