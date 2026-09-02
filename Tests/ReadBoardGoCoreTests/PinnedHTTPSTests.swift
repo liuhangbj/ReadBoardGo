@@ -214,6 +214,7 @@ final class PinnedHTTPSTests: XCTestCase {
         request.setValue("attacker.example", forHTTPHeaderField: "host")
         request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
         request.setValue("999", forHTTPHeaderField: "content-length")
+        request.setValue("chunked", forHTTPHeaderField: "Transfer-Encoding")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = Data("{}".utf8)
 
@@ -225,6 +226,7 @@ final class PinnedHTTPSTests: XCTestCase {
         XCTAssertTrue(text.contains("Accept-Encoding: identity\r\n"))
         XCTAssertTrue(text.contains("Content-Length: 2\r\n"))
         XCTAssertFalse(text.contains("attacker.example"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("Transfer-Encoding:"))
     }
 
     func testPinnedHTTP1ParsesContentLengthAndChunkedResponses() throws {
@@ -255,6 +257,8 @@ final class PinnedHTTPSTests: XCTestCase {
         XCTAssertThrowsError(try PinnedHTTP1Request.serializedRequest(request))
         XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(
             Data("5\r\nhelloXX0\r\n\r\n".utf8)))
+        XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(
+            Data("-1\r\n0\r\n\r\n".utf8)))
     }
 
     func testPinnedClientClassifiesCrossOriginRedirectPerRequest() async throws {

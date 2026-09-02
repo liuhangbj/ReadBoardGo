@@ -428,6 +428,9 @@ final class PinnedHTTP1Request: @unchecked Sendable {
             throw ReadBoardGoConnectionError.invalidServerAddress
         }
         let method = (request.httpMethod ?? "GET").uppercased()
+        guard isValidHTTPToken(method) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
         guard let components = URLComponents(
             url: url, resolvingAgainstBaseURL: false) else {
             throw ReadBoardGoConnectionError.invalidServerAddress
@@ -435,15 +438,17 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         let target = components.percentEncodedPath.isEmpty
             ? "/" : components.percentEncodedPath
         let requestTarget = target + (components.percentEncodedQuery.map { "?" + $0 } ?? "")
-        guard !method.contains("\r"), !method.contains("\n"),
-              !requestTarget.contains("\r"), !requestTarget.contains("\n") else {
+        guard !containsForbiddenHeaderValue(requestTarget) else {
             throw ReadBoardGoConnectionError.connectionFailed
         }
         let port = url.port ?? 443
         let escapedHost = host.contains(":") ? "[\(host)]" : host
         let hostValue = port == 443 ? escapedHost : "\(escapedHost):\(port)"
         var headers = request.allHTTPHeaderFields ?? [:]
-        for protected in ["Host", "Connection", "Accept-Encoding", "Content-Length"] {
+        for protected in [
+            "Host", "Connection", "Accept-Encoding", "Content-Length",
+            "Transfer-Encoding", "TE", "Trailer", "Upgrade",
+        ] {
             headers.keys.filter { $0.caseInsensitiveCompare(protected) == .orderedSame }
                 .forEach { headers.removeValue(forKey: $0) }
         }
@@ -452,10 +457,10 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         headers["Accept-Encoding"] = "identity"
         let body = request.httpBody ?? Data()
         if !body.isEmpty { headers["Content-Length"] = String(body.count) }
-        for (name, value) in headers where
-            name.contains("\r") || name.contains("\n") ||
-            value.contains("\r") || value.contains("\n") {
-            throw ReadBoardGoConnectionError.connectionFailed
+        for (name, value) in headers {
+            guard isValidHTTPToken(name), !containsForbiddenHeaderValue(value) else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
         }
         var head = "\(method) \(requestTarget) HTTP/1.1\r\n"
         for (name, value) in headers.sorted(by: { $0.key < $1.key }) {
@@ -487,10 +492,15 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         }
         var headers: [String: String] = [:]
         for line in lines.dropFirst() {
-            guard let colon = line.firstIndex(of: ":") else { continue }
+            guard let colon = line.firstIndex(of: ":") else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
             let name = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
             let value = String(line[line.index(after: colon)...])
                 .trimmingCharacters(in: .whitespaces)
+            guard isValidHTTPToken(name), !containsForbiddenHeaderValue(value) else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
             if let existingKey = headers.keys.first(where: {
                 $0.caseInsensitiveCompare(name) == .orderedSame
             }), let existing = headers[existingKey] {
@@ -532,7 +542,8 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         while true {
             guard let lineEnd = data[cursor...].range(of: crlf)?.lowerBound,
                   let line = String(data: data[cursor..<lineEnd], encoding: .utf8),
-                  let size = Int(line.split(separator: ";", maxSplits: 1)[0], radix: 16) else {
+                  let size = Int(line.split(separator: ";", maxSplits: 1)[0], radix: 16),
+                  size >= 0 else {
                 throw ReadBoardGoConnectionError.connectionFailed
             }
             cursor = data.index(lineEnd, offsetBy: 2)
@@ -564,6 +575,19 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         case .dns: return URLError(.cannotFindHost)
         case .tls: return ReadBoardGoConnectionError.secureConnectionFailed
         default: return ReadBoardGoConnectionError.connectionFailed
+        }
+    }
+
+    private static func isValidHTTPToken(_ value: String) -> Bool {
+        let separators = CharacterSet(charactersIn: "()<>@,;:\\\"/[]?={} \t")
+        return !value.isEmpty && value.unicodeScalars.allSatisfy {
+            $0.value > 0x20 && $0.value < 0x7f && !separators.contains($0)
+        }
+    }
+
+    private static func containsForbiddenHeaderValue(_ value: String) -> Bool {
+        value.unicodeScalars.contains { scalar in
+            scalar.value == 0x7f || (scalar.value < 0x20 && scalar.value != 0x09)
         }
     }
 }
