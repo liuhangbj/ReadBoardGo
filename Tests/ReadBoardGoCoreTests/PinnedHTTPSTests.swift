@@ -251,7 +251,7 @@ final class PinnedHTTPSTests: XCTestCase {
     func testPinnedHTTP1RejectsHeaderInjectionAndMalformedChunking() throws {
         var request = URLRequest(url: try XCTUnwrap(URL(
             string: "https://reader.example.com:7331/health")))
-        request.setValue("safe\r\nInjected: value", forHTTPHeaderField: "X-Test")
+        request.httpMethod = "GET\r\nInjected: value"
         XCTAssertThrowsError(try PinnedHTTP1Request.serializedRequest(request))
         XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(
             Data("5\r\nhelloXX0\r\n\r\n".utf8)))
