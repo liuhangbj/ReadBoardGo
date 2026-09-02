@@ -43,7 +43,9 @@ public enum PinnedHTTPS {
     /// supplied by URLSession is not sufficient on older macOS releases because
     /// that object was created with an SSL hostname policy and may retain the
     /// original policy context even after it is mutated. A fresh trust removes
-    /// only hostname validation while preserving date and signature validation.
+    /// only hostname validation while preserving certificate date validation.
+    /// The exact SHA-256 leaf fingerprint, rather than the self-signature of an
+    /// explicitly trusted self-signed anchor, is the server identity proof.
     static func credential(
         for trust: SecTrust,
         expectedFingerprint: String

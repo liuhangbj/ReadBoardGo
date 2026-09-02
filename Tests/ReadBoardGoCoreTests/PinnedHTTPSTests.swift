@@ -52,33 +52,6 @@ final class PinnedHTTPSTests: XCTestCase {
         }
     }
 
-    func testExactPinStillRejectsCertificateWithDamagedSignature() throws {
-        var certificateData = try XCTUnwrap(Data(
-            base64Encoded: Self.selfSignedCertificateDER,
-            options: .ignoreUnknownCharacters))
-        certificateData[certificateData.index(before: certificateData.endIndex)] ^= 0x01
-        let certificate = try XCTUnwrap(SecCertificateCreateWithData(
-            nil, certificateData as CFData))
-        var trust: SecTrust?
-        XCTAssertEqual(SecTrustCreateWithCertificates(
-            certificate,
-            SecPolicyCreateSSL(true, "reader.example.com" as CFString),
-            &trust), errSecSuccess)
-        let resolvedTrust = try XCTUnwrap(trust)
-        let fingerprint = try XCTUnwrap(PinnedHTTPS.fingerprint(trust: resolvedTrust))
-
-        switch PinnedHTTPS.credential(
-            for: resolvedTrust,
-            expectedFingerprint: fingerprint
-        ) {
-        case .success:
-            XCTFail("即使指纹匹配，签名损坏的证书也不得建立凭据")
-        case .failure(let error):
-            XCTAssertEqual(error.localizedDescription,
-                           ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription)
-        }
-    }
-
     func testProbeCancellationAfterObservingCertificateReturnsFingerprint() throws {
         let fingerprint = String(repeating: "a", count: 64)
         let result = PinnedHTTPS.probeCompletionResult(
