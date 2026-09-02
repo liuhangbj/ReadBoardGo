@@ -24,9 +24,10 @@
     <true/>
     <key>NSAppTransportSecurity</key>
     <dict>
-        <key>NSAllowsArbitraryLoadsInMedia</key>
-        <true/>
-        <key>NSAllowsLocalNetworking</key>
+        <!-- ReadBoard Go connects to user-owned servers whose self-signed TLS
+             identity is verified by an exact SHA-256 certificate pin. ATS must
+             hand these connections to the app's trust challenge handler. -->
+        <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
     <key>NSLocalNetworkUsageDescription</key>
