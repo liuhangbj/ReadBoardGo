@@ -578,7 +578,7 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         }
     }
 
-    private static func isValidHTTPToken(_ value: String) -> Bool {
+    static func isValidHTTPToken(_ value: String) -> Bool {
         let separators = CharacterSet(charactersIn: "()<>@,;:\\\"/[]?={} \t")
         return !value.isEmpty && value.unicodeScalars.allSatisfy {
             $0.value > 0x20 && $0.value < 0x7f && !separators.contains($0)
