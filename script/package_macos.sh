@@ -13,6 +13,8 @@ BUILT_APP="$DERIVED_DATA/Build/Products/Release/$APP_NAME.app"
 INSTALLED_APP="$OUTPUT_DIR/$APP_NAME.app"
 
 "$ROOT_DIR/script/verify_core_ref.sh"
+"$ROOT_DIR/script/verify_ats_policy.sh" \
+  "$ROOT_DIR/App/Info-macOS.plist" "$ROOT_DIR/App/Info-iOS.plist"
 
 xcodebuild -quiet \
   -project "$ROOT_DIR/ReadBoardGo.xcodeproj" \
@@ -47,6 +49,7 @@ done < <(find "$STAGED_APP/Contents/PlugIns" -type f -path '*/Contents/Info.plis
 
 codesign --deep --force --sign - "$STAGED_APP"
 codesign --verify --deep --strict "$STAGED_APP"
+"$ROOT_DIR/script/verify_ats_policy.sh" "$STAGED_APP/Contents/Info.plist"
 
 ARCHITECTURES="$(lipo -archs "$STAGED_APP/Contents/MacOS/$APP_NAME")"
 [[ " $ARCHITECTURES " == *" arm64 "* && " $ARCHITECTURES " == *" x86_64 "* ]] || {

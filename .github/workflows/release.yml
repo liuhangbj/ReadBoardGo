@@ -35,6 +35,7 @@ jobs:
         run: |
           [[ "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
           script/verify_core_ref.sh
+          script/verify_ats_policy.sh
 
       - name: Require signing and notarization credentials
         if: env.HAS_SIGNING_CREDENTIALS != 'true'

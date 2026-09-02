@@ -23,7 +23,9 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Verify pinned Core revision
-        run: script/verify_core_ref.sh
+        run: |
+          script/verify_core_ref.sh
+          script/verify_ats_policy.sh
 
       - name: Test remote client package
         env:

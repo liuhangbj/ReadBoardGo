@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import Network
 import ReadBoardRemote
 import Security
 
@@ -231,29 +232,22 @@ protocol PinnedHTTPSChannelLoading: Sendable {
 }
 
 private final class PinnedHTTPSChannel: PinnedHTTPSChannelLoading, @unchecked Sendable {
-    private let delegate: PinnedCertificateDelegate
-    private let session: URLSession
+    private let certificateFingerprint: String
+    private let allowedOrigin: PinnedHTTPSOrigin?
 
     init(certificateFingerprint: String, allowedOrigin: PinnedHTTPSOrigin?) {
-        delegate = PinnedCertificateDelegate(
-            expectedFingerprint: certificateFingerprint,
-            allowedOrigin: allowedOrigin)
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.urlCache = nil
-        configuration.httpCookieStorage = nil
-        session = URLSession(configuration: configuration,
-                             delegate: delegate, delegateQueue: nil)
+        self.certificateFingerprint = certificateFingerprint
+        self.allowedOrigin = allowedOrigin
     }
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-        do {
-            let result = try await session.data(for: request)
-            if let rejection = delegate.rejection { throw rejection }
-            return result
-        } catch {
-            if let rejection = delegate.rejection { throw rejection }
-            throw error
+        guard allowedOrigin?.matches(request.url) ?? true else {
+            throw ReadBoardGoConnectionError.unsafeRedirect
         }
+        return try await PinnedHTTP1Request(
+            request: request,
+            expectedFingerprint: certificateFingerprint
+        ).perform()
     }
 }
 
@@ -271,6 +265,330 @@ private struct PinnedHTTPSOrigin: Sendable, Equatable {
     func matches(_ url: URL?) -> Bool {
         guard let url else { return false }
         return self == PinnedHTTPSOrigin(url)
+    }
+}
+
+/// ReadBoard API transport deliberately lives below URLSession/ATS. ATS performs
+/// public-PKI policy before an app trust challenge on some older macOS releases,
+/// which makes a correctly pinned self-signed server unusable. Network.framework
+/// lets the exact same SecTrust pin be the TLS handshake verifier without relaxing
+/// ATS for article images, WebKit, media, or any other app traffic.
+final class PinnedHTTP1Request: @unchecked Sendable {
+    private static let maximumResponseBytes = 128 * 1024 * 1024
+    private let request: URLRequest
+    private let expectedFingerprint: String
+    private let queue = DispatchQueue(label: "com.liuhangbj.readboardgo.pinned-http")
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<(Data, URLResponse), any Error>?
+    private var connection: NWConnection?
+    private var timeoutWorkItem: DispatchWorkItem?
+    private var responseData = Data()
+    private var finished = false
+
+    init(request: URLRequest, expectedFingerprint: String) {
+        self.request = request
+        self.expectedFingerprint = PinnedHTTPS.normalized(expectedFingerprint)
+    }
+
+    func perform() async throws -> (Data, URLResponse) {
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                begin(continuation: continuation)
+            }
+        } onCancel: {
+            self.finish(.failure(CancellationError()))
+        }
+    }
+
+    private func begin(
+        continuation: CheckedContinuation<(Data, URLResponse), any Error>
+    ) {
+        guard let url = request.url,
+              url.scheme?.lowercased() == "https",
+              let host = url.host,
+              let rawPort = UInt16(exactly: url.port ?? 443),
+              let endpointPort = NWEndpoint.Port(rawValue: rawPort) else {
+            continuation.resume(throwing: ReadBoardGoConnectionError.tlsRequired)
+            return
+        }
+
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+            return
+        }
+        self.continuation = continuation
+        lock.unlock()
+
+        let tls = NWProtocolTLS.Options()
+        let verifyQueue = queue
+        sec_protocol_options_set_verify_block(
+            tls.securityProtocolOptions,
+            { [weak self, expectedFingerprint] _, secTrust, complete in
+                let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
+                switch PinnedHTTPS.pinnedTrust(
+                    for: trust,
+                    expectedFingerprint: expectedFingerprint
+                ) {
+                case .success: complete(true)
+                case .failure(let error):
+                    self?.finish(.failure(error))
+                    complete(false)
+                }
+            },
+            verifyQueue)
+        sec_protocol_options_add_tls_application_protocol(
+            tls.securityProtocolOptions, "http/1.1")
+        let parameters = NWParameters(tls: tls, tcp: NWProtocolTCP.Options())
+        let connection = NWConnection(
+            host: NWEndpoint.Host(host), port: endpointPort, using: parameters)
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            connection.cancel()
+            return
+        }
+        self.connection = connection
+        connection.stateUpdateHandler = { [weak self] state in
+            self?.handle(state: state)
+        }
+        let seconds = max(1, request.timeoutInterval > 0 ? request.timeoutInterval : 20)
+        let timeout = DispatchWorkItem { [weak self] in
+            self?.finish(.failure(URLError(.timedOut)))
+        }
+        timeoutWorkItem = timeout
+        lock.unlock()
+        queue.asyncAfter(deadline: .now() + seconds, execute: timeout)
+        connection.start(queue: queue)
+    }
+
+    private func handle(state: NWConnection.State) {
+        switch state {
+        case .ready:
+            do {
+                let data = try Self.serializedRequest(request)
+                connection?.send(content: data, completion: .contentProcessed {
+                    [weak self] error in
+                    if let error { self?.finish(.failure(Self.transportError(error))) }
+                })
+                receiveNext()
+            } catch {
+                finish(.failure(error))
+            }
+        case .failed(let error):
+            finish(.failure(Self.transportError(error)))
+        case .cancelled:
+            finish(.failure(CancellationError()))
+        default:
+            break
+        }
+    }
+
+    private func receiveNext() {
+        connection?.receive(minimumIncompleteLength: 1, maximumLength: 1_048_576) {
+            [weak self] data, _, isComplete, error in
+            guard let self else { return }
+            if let data { responseData.append(data) }
+            if responseData.count > Self.maximumResponseBytes {
+                finish(.failure(ReadBoardGoConnectionError.connectionFailed))
+            } else if let error {
+                finish(.failure(Self.transportError(error)))
+            } else if isComplete {
+                do {
+                    finish(.success(try Self.parseResponse(responseData, request: request)))
+                } catch {
+                    finish(.failure(error))
+                }
+            } else {
+                receiveNext()
+            }
+        }
+    }
+
+    private func finish(_ result: Result<(Data, URLResponse), any Error>) {
+        lock.lock()
+        guard !finished else { lock.unlock(); return }
+        finished = true
+        let continuation = self.continuation
+        self.continuation = nil
+        let connection = self.connection
+        self.connection = nil
+        let timeout = timeoutWorkItem
+        timeoutWorkItem = nil
+        lock.unlock()
+        timeout?.cancel()
+        connection?.stateUpdateHandler = nil
+        connection?.cancel()
+        continuation?.resume(with: result)
+    }
+
+    static func serializedRequest(_ request: URLRequest) throws -> Data {
+        guard let url = request.url, let host = url.host else {
+            throw ReadBoardGoConnectionError.invalidServerAddress
+        }
+        let method = (request.httpMethod ?? "GET").uppercased()
+        guard isValidHTTPToken(method) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        guard let components = URLComponents(
+            url: url, resolvingAgainstBaseURL: false) else {
+            throw ReadBoardGoConnectionError.invalidServerAddress
+        }
+        let target = components.percentEncodedPath.isEmpty
+            ? "/" : components.percentEncodedPath
+        let requestTarget = target + (components.percentEncodedQuery.map { "?" + $0 } ?? "")
+        guard !containsForbiddenHeaderValue(requestTarget) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        let port = url.port ?? 443
+        let escapedHost = host.contains(":") ? "[\(host)]" : host
+        let hostValue = port == 443 ? escapedHost : "\(escapedHost):\(port)"
+        var headers = request.allHTTPHeaderFields ?? [:]
+        for protected in [
+            "Host", "Connection", "Accept-Encoding", "Content-Length",
+            "Transfer-Encoding", "TE", "Trailer", "Upgrade",
+        ] {
+            headers.keys.filter { $0.caseInsensitiveCompare(protected) == .orderedSame }
+                .forEach { headers.removeValue(forKey: $0) }
+        }
+        headers["Host"] = hostValue
+        headers["Connection"] = "close"
+        headers["Accept-Encoding"] = "identity"
+        let body = request.httpBody ?? Data()
+        if !body.isEmpty { headers["Content-Length"] = String(body.count) }
+        for (name, value) in headers {
+            guard isValidHTTPToken(name), !containsForbiddenHeaderValue(value) else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+        }
+        var head = "\(method) \(requestTarget) HTTP/1.1\r\n"
+        for (name, value) in headers.sorted(by: { $0.key < $1.key }) {
+            head += "\(name): \(value)\r\n"
+        }
+        head += "\r\n"
+        var data = Data(head.utf8)
+        data.append(body)
+        return data
+    }
+
+    static func parseResponse(
+        _ data: Data, request: URLRequest
+    ) throws -> (Data, URLResponse) {
+        let separator = Data("\r\n\r\n".utf8)
+        guard let range = data.range(of: separator),
+              let head = String(data: data[..<range.lowerBound], encoding: .utf8) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        let lines = head.components(separatedBy: "\r\n")
+        guard let statusLine = lines.first else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        let statusParts = statusLine.split(separator: " ", maxSplits: 2)
+        guard statusParts.count >= 2,
+              statusParts[0].hasPrefix("HTTP/1."),
+              let status = Int(statusParts[1]), (100...599).contains(status) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        var headers: [String: String] = [:]
+        for line in lines.dropFirst() {
+            guard let colon = line.firstIndex(of: ":") else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            let name = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+            let value = String(line[line.index(after: colon)...])
+                .trimmingCharacters(in: .whitespaces)
+            guard isValidHTTPToken(name), !containsForbiddenHeaderValue(value) else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            if let existingKey = headers.keys.first(where: {
+                $0.caseInsensitiveCompare(name) == .orderedSame
+            }), let existing = headers[existingKey] {
+                headers[existingKey] = existing + ", " + value
+            } else {
+                headers[name] = value
+            }
+        }
+        var rawBody = Data(data[range.upperBound...])
+        let transferEncoding = headers.first { $0.key.caseInsensitiveCompare(
+            "Transfer-Encoding") == .orderedSame }?.value.lowercased()
+        let contentLength = headers.first { $0.key.caseInsensitiveCompare(
+            "Content-Length") == .orderedSame }.flatMap { Int($0.value) }
+        let body: Data
+        if transferEncoding?.contains("chunked") == true {
+            body = try decodeChunked(rawBody)
+        } else if let contentLength {
+            guard contentLength >= 0, rawBody.count >= contentLength else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            rawBody = Data(rawBody.prefix(contentLength))
+            body = rawBody
+        } else {
+            body = rawBody
+        }
+        guard let url = request.url,
+              let response = HTTPURLResponse(
+                url: url, statusCode: status, httpVersion: "HTTP/1.1",
+                headerFields: headers) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        return (body, response)
+    }
+
+    static func decodeChunked(_ data: Data) throws -> Data {
+        var cursor = data.startIndex
+        var decoded = Data()
+        let crlf = Data("\r\n".utf8)
+        while true {
+            guard let lineEnd = data[cursor...].range(of: crlf)?.lowerBound,
+                  let line = String(data: data[cursor..<lineEnd], encoding: .utf8),
+                  let size = Int(line.split(separator: ";", maxSplits: 1)[0], radix: 16),
+                  size >= 0 else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            cursor = data.index(lineEnd, offsetBy: 2)
+            if size == 0 { return decoded }
+            guard let bodyEnd = data.index(cursor, offsetBy: size, limitedBy: data.endIndex),
+                  bodyEnd <= data.endIndex else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            decoded.append(data[cursor..<bodyEnd])
+            guard data.distance(from: bodyEnd, to: data.endIndex) >= 2 else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            guard data[bodyEnd..<data.index(bodyEnd, offsetBy: 2)] == crlf else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            cursor = data.index(bodyEnd, offsetBy: 2)
+        }
+    }
+
+    fileprivate static func transportError(_ error: NWError) -> any Error {
+        switch error {
+        case .posix(let code):
+            switch code {
+            case .ETIMEDOUT: return URLError(.timedOut)
+            case .ECONNREFUSED: return URLError(.cannotConnectToHost)
+            case .ENETDOWN, .ENETUNREACH, .ENOTCONN: return URLError(.notConnectedToInternet)
+            default: return URLError(.networkConnectionLost)
+            }
+        case .dns: return URLError(.cannotFindHost)
+        case .tls: return ReadBoardGoConnectionError.secureConnectionFailed
+        default: return ReadBoardGoConnectionError.connectionFailed
+        }
+    }
+
+    static func isValidHTTPToken(_ value: String) -> Bool {
+        let separators = CharacterSet(charactersIn: "()<>@,;:\\\"/[]?={} \t")
+        return !value.isEmpty && value.unicodeScalars.allSatisfy {
+            $0.value > 0x20 && $0.value < 0x7f && !separators.contains($0)
+        }
+    }
+
+    private static func containsForbiddenHeaderValue(_ value: String) -> Bool {
+        value.unicodeScalars.contains { scalar in
+            scalar.value == 0x7f || (scalar.value < 0x20 && scalar.value != 0x09)
+        }
     }
 }
 
@@ -338,65 +656,86 @@ private final class PinnedCertificateDelegate: NSObject, URLSessionDelegate,
     }
 }
 
-private final class TLSCertificateProbe: NSObject, URLSessionDelegate, @unchecked Sendable {
+private final class TLSCertificateProbe: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.liuhangbj.readboardgo.certificate-probe")
     private let lock = NSLock()
     private var continuation: CheckedContinuation<String, any Error>?
-    private var session: URLSession?
+    private var connection: NWConnection?
+    private var timeoutWorkItem: DispatchWorkItem?
     private var finished = false
-    private var observedFingerprint: String?
 
     func inspect(baseURL: URL) async throws -> String {
-        guard baseURL.scheme?.lowercased() == "https" else {
+        guard baseURL.scheme?.lowercased() == "https",
+              let host = baseURL.host,
+              let rawPort = UInt16(exactly: baseURL.port ?? 443),
+              let port = NWEndpoint.Port(rawValue: rawPort) else {
             throw ReadBoardGoConnectionError.tlsRequired
         }
-        return try await withCheckedThrowingContinuation { continuation in
-            lock.lock()
-            self.continuation = continuation
-            lock.unlock()
-
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.timeoutIntervalForRequest = 10
-            let session = URLSession(configuration: configuration,
-                                     delegate: self, delegateQueue: nil)
-            self.session = session
-            let url = URL(string: "health", relativeTo: baseURL) ?? baseURL
-            session.dataTask(with: url) { [weak self] _, _, error in
-                guard let self else { return }
-                self.complete(PinnedHTTPS.probeCompletionResult(
-                    observedFingerprint: self.currentObservedFingerprint(),
-                    error: error))
-            }.resume()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                begin(host: host, port: port, continuation: continuation)
+            }
+        } onCancel: {
+            self.complete(.failure(CancellationError()))
         }
     }
 
-    func urlSession(_ session: URLSession,
-                    didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping @Sendable
-                        (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        guard challenge.protectionSpace.authenticationMethod
-                == NSURLAuthenticationMethodServerTrust,
-              let trust = challenge.protectionSpace.serverTrust,
-              let fingerprint = PinnedHTTPS.fingerprint(trust: trust) else {
-            completionHandler(.cancelAuthenticationChallenge, nil)
-            complete(.failure(ReadBoardGoConnectionError.certificateUnavailable))
+    private func begin(
+        host: String,
+        port: NWEndpoint.Port,
+        continuation: CheckedContinuation<String, any Error>
+    ) {
+        lock.lock()
+        guard !finished else {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
             return
         }
-        recordObservedFingerprint(fingerprint)
-        completionHandler(.cancelAuthenticationChallenge, nil)
-        complete(.success(fingerprint))
-    }
-
-    private func recordObservedFingerprint(_ fingerprint: String) {
-        lock.lock()
-        if !finished { observedFingerprint = fingerprint }
+        self.continuation = continuation
         lock.unlock()
-    }
 
-    private func currentObservedFingerprint() -> String? {
+        let tls = NWProtocolTLS.Options()
+        sec_protocol_options_set_verify_block(
+            tls.securityProtocolOptions,
+            { [weak self] _, secTrust, complete in
+                let trust = sec_trust_copy_ref(secTrust).takeRetainedValue()
+                guard let fingerprint = PinnedHTTPS.fingerprint(trust: trust) else {
+                    complete(false)
+                    self?.complete(.failure(
+                        ReadBoardGoConnectionError.certificateUnavailable))
+                    return
+                }
+                self?.complete(.success(fingerprint))
+                complete(false)
+            },
+            queue)
+        let parameters = NWParameters(tls: tls, tcp: NWProtocolTCP.Options())
+        let connection = NWConnection(
+            host: NWEndpoint.Host(host), port: port, using: parameters)
         lock.lock()
-        let value = observedFingerprint
+        guard !finished else {
+            lock.unlock()
+            connection.cancel()
+            return
+        }
+        self.connection = connection
+        connection.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .failed(let error):
+                self?.complete(.failure(PinnedHTTP1Request.transportError(error)))
+            case .cancelled:
+                self?.complete(.failure(CancellationError()))
+            default:
+                break
+            }
+        }
+        let timeout = DispatchWorkItem { [weak self] in
+            self?.complete(.failure(URLError(.timedOut)))
+        }
+        timeoutWorkItem = timeout
         lock.unlock()
-        return value
+        queue.asyncAfter(deadline: .now() + 10, execute: timeout)
+        connection.start(queue: queue)
     }
 
     private func complete(_ result: Result<String, any Error>) {
@@ -404,10 +743,14 @@ private final class TLSCertificateProbe: NSObject, URLSessionDelegate, @unchecke
         guard !finished, let continuation else { lock.unlock(); return }
         finished = true
         self.continuation = nil
-        let session = self.session
-        self.session = nil
+        let connection = self.connection
+        self.connection = nil
+        let timeout = timeoutWorkItem
+        timeoutWorkItem = nil
         lock.unlock()
+        timeout?.cancel()
+        connection?.stateUpdateHandler = nil
+        connection?.cancel()
         continuation.resume(with: result)
-        session?.invalidateAndCancel()
     }
 }
