@@ -37,6 +37,40 @@ public enum PinnedHTTPS {
         value.lowercased().filter { $0.isHexDigit }
     }
 
+    /// Certificate pinning is the server identity check. Once the exact leaf
+    /// fingerprint matches, evaluate that leaf as the only trust anchor with a
+    /// basic X.509 policy instead of asking the public PKI to also validate the
+    /// dynamic hostname. This keeps self-signed ReadBoard certificates working
+    /// consistently on macOS 14 while preserving date/signature validation.
+    static func credential(
+        for trust: SecTrust,
+        expectedFingerprint: String
+    ) -> Result<URLCredential, ReadBoardGoConnectionError> {
+        guard let certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+              let leaf = certificates.first,
+              let fingerprint = fingerprint(trust: trust) else {
+            return .failure(.certificateUnavailable)
+        }
+        guard normalized(fingerprint) == normalized(expectedFingerprint) else {
+            return .failure(.certificateNotTrusted)
+        }
+
+        let policyStatus = SecTrustSetPolicies(trust, SecPolicyCreateBasicX509())
+        guard policyStatus == errSecSuccess else {
+            return .failure(.certificateUnavailable)
+        }
+        let anchorStatus = SecTrustSetAnchorCertificates(trust, [leaf] as CFArray)
+        guard anchorStatus == errSecSuccess,
+              SecTrustSetAnchorCertificatesOnly(trust, true) == errSecSuccess else {
+            return .failure(.certificateUnavailable)
+        }
+        var evaluationError: CFError?
+        guard SecTrustEvaluateWithError(trust, &evaluationError) else {
+            return .failure(.certificateNotTrusted)
+        }
+        return .success(URLCredential(trust: trust))
+    }
+
     /// Certificate inspection intentionally cancels the unauthenticated probe
     /// after observing server trust. URLSession may report that cancellation
     /// before the challenge callback resumes its continuation, so the observed
@@ -249,18 +283,21 @@ private final class PinnedCertificateDelegate: NSObject, URLSessionDelegate,
             completionHandler(.performDefaultHandling, nil)
             return
         }
-        guard let trust = challenge.protectionSpace.serverTrust,
-              let fingerprint = PinnedHTTPS.fingerprint(trust: trust) else {
+        guard let trust = challenge.protectionSpace.serverTrust else {
             recordRejection(.certificateUnavailable)
             completionHandler(.cancelAuthenticationChallenge, nil)
             return
         }
-        guard PinnedHTTPS.normalized(fingerprint) == expectedFingerprint else {
-            recordRejection(.certificateNotTrusted)
+        switch PinnedHTTPS.credential(
+            for: trust,
+            expectedFingerprint: expectedFingerprint
+        ) {
+        case .success(let credential):
+            completionHandler(.useCredential, credential)
+        case .failure(let rejection):
+            recordRejection(rejection)
             completionHandler(.cancelAuthenticationChallenge, nil)
-            return
         }
-        completionHandler(.useCredential, URLCredential(trust: trust))
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask,

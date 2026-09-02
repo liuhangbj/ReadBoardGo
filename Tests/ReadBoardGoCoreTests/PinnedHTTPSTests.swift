@@ -1,9 +1,46 @@
 import Foundation
 import ReadBoardContract
+import Security
 import XCTest
 @testable import ReadBoardGoCore
 
 final class PinnedHTTPSTests: XCTestCase {
+    func testExactPinAcceptsSelfSignedLeafWithoutHostnameSAN() throws {
+        let certificateData = try XCTUnwrap(Data(
+            base64Encoded: Self.selfSignedCertificateDER,
+            options: .ignoreUnknownCharacters))
+        let certificate = try XCTUnwrap(SecCertificateCreateWithData(
+            nil, certificateData as CFData))
+        var trust: SecTrust?
+        XCTAssertEqual(SecTrustCreateWithCertificates(
+            certificate,
+            SecPolicyCreateSSL(true, "reader.example.com" as CFString),
+            &trust), errSecSuccess)
+        let resolvedTrust = try XCTUnwrap(trust)
+        let fingerprint = try XCTUnwrap(PinnedHTTPS.fingerprint(trust: resolvedTrust))
+
+        switch PinnedHTTPS.credential(
+            for: resolvedTrust,
+            expectedFingerprint: fingerprint
+        ) {
+        case .success:
+            break
+        case .failure(let error):
+            XCTFail("精确固定的自签名证书应建立凭据：\(error)")
+        }
+
+        switch PinnedHTTPS.credential(
+            for: resolvedTrust,
+            expectedFingerprint: String(repeating: "0", count: 64)
+        ) {
+        case .success:
+            XCTFail("错误证书指纹不得建立凭据")
+        case .failure(let error):
+            XCTAssertEqual(error.localizedDescription,
+                           ReadBoardGoConnectionError.certificateNotTrusted.localizedDescription)
+        }
+    }
+
     func testProbeCancellationAfterObservingCertificateReturnsFingerprint() throws {
         let fingerprint = String(repeating: "a", count: 64)
         let result = PinnedHTTPS.probeCompletionResult(
@@ -261,6 +298,10 @@ final class PinnedHTTPSTests: XCTestCase {
             XCTAssertEqual(error.localizedDescription, "服务器证书未受信任或已发生变化")
         }
     }
+
+    private static let selfSignedCertificateDER = """
+    MIICwDCCAagCCQCHuvW/rABsPjANBgkqhkiG9w0BAQsFADAiMSAwHgYDVQQDDBdSZWFkQm9hcmQgTG9jYWwgU2VydmljZTAeFw0yNjA4MDgxNTIxNTlaFw0zNjA4MDUxNTIxNTlaMCIxIDAeBgNVBAMMF1JlYWRCb2FyZCBMb2NhbCBTZXJ2aWNlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzLM0GSQ15uABGIFVKLT2yYkL9cBBAd9DtdApo2cHXLlMWgW+chaD1ewRZe9jCKllOh64aapYM5sAjdwRjye6OTMsLFCU1O9seerfimbfAoURfnoeEZCIt5TovJ8oA7gZKV7OGZhqU30p2J7Z23BbO+WYK0yfQNysT02az/RW2SqelPU1a9wVamM6SUHHc3KqKFM/IZbwfLMkbj9S7veNE9iRIMw678lilLa91cm6mYp4AlZ8fOvGOXXS+2rsuiu+znMqRqus1mupojRfQrW/x5xBb8uz6sViUVor74/ZgBnBSloCjD/Hs8kYr+Vgi8FOmmkelHc5ZrovSG8sEHObXQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQALyP9TXgOlBnjpFLPIFl5XFuvI6fE2Yvka8TG7rhzSAv6WG1tTL0O8NbjdAYCmypkS3E7OLvgq0ATinAudUugzSldRBsPa9PEhpt+bTUv1Ah6qLbx6ItSmODhsvbFyO4Oach3h5KeEKbr+3zkVTbSFGXbXU0UfhjqYLoU8JIv0OxKNPTuC81Ha/bA8qkh1PrZ2xzBP35WY2SNczSJ/sdlPGID1UD62iTLNtYVVkdsUMsPIz/PiPD9PSRcAWEztsswU9NgpxW/uddXIvjJK62qvg4vuMBR+dt+h7W9qmPC56o7S5LUiGbX+SV+AupyEBhQcVZLd/JfGjcFteS2lP6kR
+    """
 }
 
 private struct EmptyConnectionStore: ConnectionStoring {
