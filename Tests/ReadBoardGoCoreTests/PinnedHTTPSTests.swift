@@ -207,6 +207,56 @@ final class PinnedHTTPSTests: XCTestCase {
         }
     }
 
+    func testPinnedHTTP1SerializesEscapedTargetAndProtectsTransportHeaders() throws {
+        var request = URLRequest(url: try XCTUnwrap(URL(
+            string: "https://reader.example.com:7331/api/v1/search?q=%E4%B8%AD%E6%96%87")))
+        request.httpMethod = "POST"
+        request.setValue("attacker.example", forHTTPHeaderField: "host")
+        request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
+        request.setValue("999", forHTTPHeaderField: "content-length")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+
+        let serialized = try PinnedHTTP1Request.serializedRequest(request)
+        let text = try XCTUnwrap(String(data: serialized, encoding: .utf8))
+        XCTAssertTrue(text.hasPrefix(
+            "POST /api/v1/search?q=%E4%B8%AD%E6%96%87 HTTP/1.1\r\n"))
+        XCTAssertTrue(text.contains("Host: reader.example.com:7331\r\n"))
+        XCTAssertTrue(text.contains("Accept-Encoding: identity\r\n"))
+        XCTAssertTrue(text.contains("Content-Length: 2\r\n"))
+        XCTAssertFalse(text.contains("attacker.example"))
+    }
+
+    func testPinnedHTTP1ParsesContentLengthAndChunkedResponses() throws {
+        let request = URLRequest(url: try XCTUnwrap(URL(
+            string: "https://reader.example.com:7331/health")))
+        let contentLengthResponse = Data(
+            "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nX-Test: yes\r\n\r\nokextra".utf8)
+        let (body, response) = try PinnedHTTP1Request.parseResponse(
+            contentLengthResponse, request: request)
+        XCTAssertEqual(String(decoding: body, as: UTF8.self), "ok")
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+        XCTAssertEqual((response as? HTTPURLResponse)?.value(
+            forHTTPHeaderField: "X-Test"), "yes")
+
+        let chunkedResponse = Data((
+            "HTTP/1.1 400 Bad Request\r\nTransfer-Encoding: chunked\r\n\r\n" +
+            "5\r\nhello\r\n6;ext=x\r\n world\r\n0\r\n\r\n").utf8)
+        let (chunkedBody, chunkedHTTP) = try PinnedHTTP1Request.parseResponse(
+            chunkedResponse, request: request)
+        XCTAssertEqual(String(decoding: chunkedBody, as: UTF8.self), "hello world")
+        XCTAssertEqual((chunkedHTTP as? HTTPURLResponse)?.statusCode, 400)
+    }
+
+    func testPinnedHTTP1RejectsHeaderInjectionAndMalformedChunking() throws {
+        var request = URLRequest(url: try XCTUnwrap(URL(
+            string: "https://reader.example.com:7331/health")))
+        request.setValue("safe\r\nInjected: value", forHTTPHeaderField: "X-Test")
+        XCTAssertThrowsError(try PinnedHTTP1Request.serializedRequest(request))
+        XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(
+            Data("5\r\nhelloXX0\r\n\r\n".utf8)))
+    }
+
     func testPinnedClientClassifiesCrossOriginRedirectPerRequest() async throws {
         let baseURL = try XCTUnwrap(URL(string: "https://reader.example.com:7331"))
         let recorder = PinnedRequestRecorder()
