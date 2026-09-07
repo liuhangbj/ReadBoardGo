@@ -4,7 +4,7 @@ import PackageDescription
 
 let configuredCorePath = ProcessInfo.processInfo.environment["READBOARD_CORE_PATH"]
 let coreRevision = ProcessInfo.processInfo.environment["READBOARD_CORE_REF"]
-    ?? "bec12587fd8b01e4769c523b8cb5c7f68480dbcd"
+    ?? "6aec0a0f1e692a8219d0543f7ab63e17007425fa"
 let hasLocalCore = configuredCorePath.map { path in
     FileManager.default.fileExists(
         atPath: URL(fileURLWithPath: path)
@@ -36,7 +36,8 @@ let package = Package(
             dependencies: [
                 "ReadBoardGoCore",
                 .product(name: "ReadBoardRemote", package: "ReadBoard"),
-            ]
+            ],
+            exclude: ["Fixtures"]
         ),
     ]
 )

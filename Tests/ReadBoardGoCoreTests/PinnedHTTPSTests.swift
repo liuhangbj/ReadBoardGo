@@ -1,5 +1,6 @@
 import Foundation
 import ReadBoardContract
+import ReadBoardRemote
 import Security
 import XCTest
 @testable import ReadBoardGoCore
@@ -101,13 +102,20 @@ final class PinnedHTTPSTests: XCTestCase {
             "服务器证书未受信任或已发生变化")
     }
 
-    func testPinnedClientRetriesOnlyUnownedCancellationOnce() {
+    func testPinnedClientRetriesOnlyTransientTransportFailures() {
         XCTAssertTrue(PinnedHTTPSClient.shouldRetry(
             error: URLError(.cancelled), taskIsCancelled: false))
         XCTAssertFalse(PinnedHTTPSClient.shouldRetry(
             error: URLError(.cancelled), taskIsCancelled: true))
-        XCTAssertFalse(PinnedHTTPSClient.shouldRetry(
+        XCTAssertTrue(PinnedHTTPSClient.shouldRetry(
             error: URLError(.timedOut), taskIsCancelled: false))
+        XCTAssertTrue(PinnedHTTPSClient.shouldRetry(
+            error: URLError(.networkConnectionLost), taskIsCancelled: false))
+        XCTAssertFalse(PinnedHTTPSClient.shouldRetry(
+            error: URLError(.serverCertificateUntrusted), taskIsCancelled: false))
+        XCTAssertFalse(PinnedHTTPSClient.shouldRetry(
+            error: ReadBoardGoConnectionError.certificateNotTrusted,
+            taskIsCancelled: false))
         XCTAssertTrue(PinnedHTTPSClient.normalized(
             error: URLError(.cancelled), taskIsCancelled: true) is CancellationError)
         XCTAssertEqual(
@@ -117,7 +125,7 @@ final class PinnedHTTPSTests: XCTestCase {
     }
 
     func testPinnedClientRebuildsOnceAfterTransientCancellation() async throws {
-        let attempt = try await PinnedHTTPSClient.retryCancelledOnce(
+        let attempt = try await PinnedHTTPSClient.retryTransientOnce(
             allowsRetry: true) { attempt in
             if attempt == 0 { throw URLError(.cancelled) }
             return attempt
@@ -125,7 +133,7 @@ final class PinnedHTTPSTests: XCTestCase {
         XCTAssertEqual(attempt, 1)
 
         do {
-            _ = try await PinnedHTTPSClient.retryCancelledOnce(
+            _ = try await PinnedHTTPSClient.retryTransientOnce(
                 allowsRetry: true) { _ -> Int in
                 throw URLError(.cancelled)
             }
@@ -136,6 +144,27 @@ final class PinnedHTTPSTests: XCTestCase {
         }
     }
 
+    func testPinnedClientRebuildsOnceAfterConnectionLost() async throws {
+        let attempt = try await PinnedHTTPSClient.retryTransientOnce(
+            allowsRetry: true) { attempt in
+            if attempt == 0 { throw URLError(.networkConnectionLost) }
+            return attempt
+        }
+        XCTAssertEqual(attempt, 1)
+
+        do {
+            _ = try await PinnedHTTPSClient.retryTransientOnce(
+                allowsRetry: true) { _ -> Int in
+                throw URLError(.networkConnectionLost)
+            }
+            XCTFail("连续连接丢失不得无限重试")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .networkConnectionLost)
+        } catch {
+            XCTFail("应保留最终网络错误类型：\(error)")
+        }
+    }
+
     func testPinnedClientNeverRetriesLoginOrOtherWriteRequests() async {
         var post = URLRequest(url: URL(string: "https://reader.example.com/api/v1/login")!)
         post.httpMethod = "POST"
@@ -143,8 +172,20 @@ final class PinnedHTTPSTests: XCTestCase {
         XCTAssertTrue(PinnedHTTPSClient.isRetrySafe(
             URLRequest(url: URL(string: "https://reader.example.com/api/v1/server/profile")!)))
 
+        var libraryPage = URLRequest(url: URL(
+            string: "https://reader.example.com/api/v1/library/page")!)
+        libraryPage.httpMethod = "POST"
+        XCTAssertTrue(PinnedHTTPSClient.isRetrySafe(libraryPage),
+                      "结构化只读查询应允许一次瞬时重试")
+
+        var markRead = URLRequest(url: URL(
+            string: "https://reader.example.com/api/v1/library/mark-read")!)
+        markRead.httpMethod = "POST"
+        XCTAssertFalse(PinnedHTTPSClient.isRetrySafe(markRead),
+                       "状态写入不得自动重放")
+
         do {
-            _ = try await PinnedHTTPSClient.retryCancelledOnce(
+            _ = try await PinnedHTTPSClient.retryTransientOnce(
                 allowsRetry: false) { attempt -> Int in
                 if attempt > 0 { XCTFail("写请求不得进入第二次尝试") }
                 throw URLError(.cancelled)
@@ -250,12 +291,73 @@ final class PinnedHTTPSTests: XCTestCase {
         XCTAssertEqual((chunkedHTTP as? HTTPURLResponse)?.statusCode, 400)
     }
 
+    func testPinnedHTTP1CompletesFromContentLengthBeforePeerClose() throws {
+        let request = URLRequest(url: try XCTUnwrap(URL(
+            string: "https://reader.example.com:7331/health")))
+        let complete = Data(
+            "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok".utf8)
+        let parsed = try XCTUnwrap(PinnedHTTP1Request.completeResponseIfAvailable(
+            complete, request: request))
+        XCTAssertEqual(String(decoding: parsed.0, as: UTF8.self), "ok")
+        XCTAssertEqual((parsed.1 as? HTTPURLResponse)?.statusCode, 200)
+
+        let truncated = Data(
+            "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nok".utf8)
+        XCTAssertNil(try PinnedHTTP1Request.completeResponseIfAvailable(
+            truncated, request: request))
+
+        let closeDelimited = Data(
+            "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nok".utf8)
+        XCTAssertNil(try PinnedHTTP1Request.completeResponseIfAvailable(
+            closeDelimited, request: request))
+    }
+
+    func testPinnedHTTP1RejectsAmbiguousResponseBoundaries() throws {
+        let request = URLRequest(url: try XCTUnwrap(URL(
+            string: "https://reader.example.com:7331/health")))
+        let conflictingLengths = Data((
+            "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n" +
+            "Content-Length: 3\r\n\r\nok!").utf8)
+        XCTAssertThrowsError(try PinnedHTTP1Request.completeResponseIfAvailable(
+            conflictingLengths, request: request))
+
+        let conflictingEncoding = Data((
+            "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n" +
+            "Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n").utf8)
+        XCTAssertThrowsError(try PinnedHTTP1Request.completeResponseIfAvailable(
+            conflictingEncoding, request: request))
+    }
+
     func testPinnedHTTP1RejectsHeaderInjectionAndMalformedChunking() throws {
         XCTAssertFalse(PinnedHTTP1Request.isValidHTTPToken("GET\r\nInjected: value"))
         XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(
             Data("5\r\nhelloXX0\r\n\r\n".utf8)))
         XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(
             Data("-1\r\n0\r\n\r\n".utf8)))
+    }
+
+    func testPinnedHTTP1RequiresCompleteChunkTerminatorAndTrailers() throws {
+        let request = URLRequest(url: try XCTUnwrap(URL(string: "https://reader.example.com/health")))
+        let head = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
+        for body in ["\r\n", ";ext=x\r\n", "+1\r\nx\r\n0\r\n\r\n",
+                     "1\r\nx\r\n0\r\n", "0\r\nX-Test: yes\r\n"] {
+            XCTAssertThrowsError(try PinnedHTTP1Request.decodeChunked(Data(body.utf8)), body)
+            XCTAssertNil(try PinnedHTTP1Request.completeResponseIfAvailable(
+                Data((head + body).utf8), request: request), body)
+        }
+        let body = "1\r\nx\r\n0\r\nX-Test: yes\r\n\r\n"
+        XCTAssertEqual(try PinnedHTTP1Request.decodeChunked(Data(body.utf8)), Data("x".utf8))
+        XCTAssertNotNil(try PinnedHTTP1Request.completeResponseIfAvailable(
+            Data((head + body).utf8), request: request))
+    }
+
+    func testPinnedHTTP1RejectsUnsupportedCodingAndInvalidLength() throws {
+        let request = URLRequest(url: try XCTUnwrap(URL(string: "https://reader.example.com/health")))
+        for header in ["Content-Length: +2", "Content-Length: 2,", "Transfer-Encoding: xchunked",
+                       "Transfer-Encoding: gzip, chunked", "Transfer-Encoding: chunked, chunked"] {
+            XCTAssertThrowsError(try PinnedHTTP1Request.parseResponse(
+                Data(("HTTP/1.1 200 OK\r\n" + header + "\r\n\r\nok").utf8), request: request), header)
+        }
     }
 
     func testPinnedClientClassifiesCrossOriginRedirectPerRequest() async throws {
@@ -309,6 +411,46 @@ final class PinnedHTTPSTests: XCTestCase {
         XCTAssertEqual(session.trustCandidate?.certificateFingerprint,
                        String(repeating: "b", count: 64))
         XCTAssertFalse(session.isWorking)
+    }
+
+    @MainActor
+    func testRequestFailureDoesNotDeclareWholeSessionOffline() {
+        let cacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("readboard-go-health-event-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+        let session = ReadBoardGoSession(
+            store: EmptyConnectionStore(),
+            offlineCache: ReadBoardGoOfflineCache(fileURL: cacheURL))
+
+        session.receiveRemoteEvent(.failed(
+            path: "api/v1/library/page",
+            kind: .transport,
+            message: "network lost"))
+
+        XCTAssertFalse(session.isOffline)
+        XCTAssertEqual(session.remoteHealth.phase, .degraded)
+        XCTAssertEqual(session.remoteHealth.failingPaths, ["api/v1/library/page"])
+    }
+
+    @MainActor
+    func testOnlyTransportErrorsEnterOfflineRetryState() {
+        XCTAssertTrue(ReadBoardGoSession.isTransportDisconnection(
+            URLError(.networkConnectionLost)))
+        XCTAssertTrue(ReadBoardGoSession.isTransportDisconnection(
+            ReadBoardGoConnectionError.connectionTimedOut))
+        XCTAssertTrue(ReadBoardGoSession.isTransportDisconnection(
+            RemoteClientError.invalidResponse))
+
+        XCTAssertFalse(ReadBoardGoSession.isTransportDisconnection(
+            RemoteClientError.server(status: 401, code: "unauthorized", message: "expired")))
+        XCTAssertFalse(ReadBoardGoSession.isTransportDisconnection(
+            RemoteClientError.server(status: 500, code: "server_error", message: "failed")))
+        XCTAssertFalse(ReadBoardGoSession.isTransportDisconnection(
+            RemoteClientError.versionMismatch))
+        XCTAssertFalse(ReadBoardGoSession.isTransportDisconnection(
+            DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "bad json"))))
+        XCTAssertFalse(ReadBoardGoSession.isTransportDisconnection(
+            ReadBoardGoConnectionError.certificateNotTrusted))
     }
 
     func testLiveCertificateProbeAndStrictPinningWhenEnabled() async throws {

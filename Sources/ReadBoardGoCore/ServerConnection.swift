@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import ReadBoardContract
 
 public struct StoredServerConnection: Codable, Equatable, Sendable {
@@ -9,6 +10,14 @@ public struct StoredServerConnection: Codable, Equatable, Sendable {
     public let scopes: [RemoteAccessScope]
     public let certificateFingerprint: String?
     public let apiVersion: String?
+
+    /// A cache belongs to one credential, not just a host/certificate. Keep
+    /// the raw token out of the persisted cache identity.
+    var cacheIdentity: String {
+        let base = baseURL.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let digest = SHA256.hash(data: Data(token.utf8)).map { String(format: "%02x", $0) }.joined()
+        return "\(base)|\(certificateFingerprint ?? "untrusted")|\(deviceID)|\(digest)"
+    }
 
     public init(baseURL: URL, credential: RemotePairingCredential,
                 certificateFingerprint: String) {

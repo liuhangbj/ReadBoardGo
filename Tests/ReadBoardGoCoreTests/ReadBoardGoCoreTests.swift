@@ -212,7 +212,7 @@ final class ReadBoardGoCoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let cache = ReadBoardGoOfflineCache(fileURL: fileURL)
-        await cache.activate(serverKey: "https://server-a|fingerprint-a")
+        try await cache.activate(serverKey: "https://server-a|fingerprint-a")
         let emptyCounts = LibraryCountsSnapshot(
             total: 0, unread: 0, pending: 0, pendingUnread: 0,
             exported: 0, exportedUnread: 0, articles: 0, articleUnread: 0,
@@ -221,7 +221,7 @@ final class ReadBoardGoCoreTests: XCTestCase {
         let firstLibrary = await cache.librarySnapshot()
         XCTAssertNotNil(firstLibrary)
 
-        await cache.activate(serverKey: "https://server-b|fingerprint-b")
+        try await cache.activate(serverKey: "https://server-b|fingerprint-b")
         let switchedLibrary = await cache.librarySnapshot()
         let switchedProfile = await cache.profile()
         let switchedStatus = await cache.status()

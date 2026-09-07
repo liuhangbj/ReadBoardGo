@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import Network
+import OSLog
 import ReadBoardRemote
 import Security
 
@@ -114,6 +115,9 @@ public enum PinnedHTTPS {
 }
 
 public final class PinnedHTTPSClient: RemoteRequestLoading, @unchecked Sendable {
+    private static let logger = Logger(
+        subsystem: "com.liuhangbj.readboardgo",
+        category: "RemoteTransport")
     private let origin: PinnedHTTPSOrigin
     private let channelFactory: @Sendable () -> any PinnedHTTPSChannelLoading
     private let lock = NSLock()
@@ -142,7 +146,7 @@ public final class PinnedHTTPSClient: RemoteRequestLoading, @unchecked Sendable 
         guard origin.matches(request.url) else {
             throw ReadBoardGoConnectionError.unsafeRedirect
         }
-        return try await Self.retryCancelledOnce(
+        return try await Self.retryTransientOnce(
             allowsRetry: Self.isRetrySafe(request)) { [self] attempt in
             if attempt == 0 {
                 let result = try await currentChannel().data(for: request)
@@ -175,7 +179,13 @@ public final class PinnedHTTPSClient: RemoteRequestLoading, @unchecked Sendable 
     static func shouldRetry(error: any Error, taskIsCancelled: Bool) -> Bool {
         guard !taskIsCancelled, !(error is CancellationError),
               let urlError = error as? URLError else { return false }
-        return urlError.code == .cancelled
+        switch urlError.code {
+        case .cancelled, .networkConnectionLost, .timedOut,
+             .cannotConnectToHost, .notConnectedToInternet, .cannotFindHost:
+            return true
+        default:
+            return false
+        }
     }
 
     static func normalized(error: any Error, taskIsCancelled: Bool) -> any Error {
@@ -186,7 +196,7 @@ public final class PinnedHTTPSClient: RemoteRequestLoading, @unchecked Sendable 
         return error
     }
 
-    static func retryCancelledOnce<Value: Sendable>(
+    static func retryTransientOnce<Value: Sendable>(
         allowsRetry: Bool,
         operation: @escaping @Sendable (Int) async throws -> Value
     ) async throws -> Value {
@@ -197,6 +207,9 @@ public final class PinnedHTTPSClient: RemoteRequestLoading, @unchecked Sendable 
                   shouldRetry(error: error, taskIsCancelled: Task.isCancelled) else {
                 throw normalized(error: error, taskIsCancelled: Task.isCancelled)
             }
+            let errorCode = (error as? URLError)?.errorCode ?? 0
+            logger.notice(
+                "Retrying one safe ReadBoard request after transient URL error \(errorCode, privacy: .public)")
         }
         do {
             return try await operation(1)
@@ -207,10 +220,32 @@ public final class PinnedHTTPSClient: RemoteRequestLoading, @unchecked Sendable 
 
     static func isRetrySafe(_ request: URLRequest) -> Bool {
         switch (request.httpMethod ?? "GET").uppercased() {
-        case "GET", "HEAD", "OPTIONS": true
-        default: false
+        case "GET", "HEAD", "OPTIONS":
+            return true
+        case "POST":
+            // The shared HTTP contract uses POST for structured read queries.
+            // Keep this an explicit allow-list: mutations, commands, login and
+            // inbox imports must never be replayed automatically.
+            let path = request.url?.path.trimmingCharacters(
+                in: CharacterSet(charactersIn: "/")) ?? ""
+            return Self.retrySafePOSTPaths.contains(path)
+        default:
+            return false
         }
     }
+
+    private static let retrySafePOSTPaths: Set<String> = [
+        "api/v1/library/page",
+        "api/v1/content/detail",
+        "api/v1/runtime/snapshot",
+        "api/v1/processing/status",
+        "api/v1/processing/recent",
+        "api/v1/sources/jobs/status",
+        "api/v1/exports/stats",
+        "api/v1/exports/preview",
+        "api/v1/admin/fulltext-failures",
+        "api/v1/auth/poll",
+    ]
 
     private static func rejectUnsafeRedirect(
         in response: URLResponse,
@@ -376,7 +411,7 @@ final class PinnedHTTP1Request: @unchecked Sendable {
             } catch {
                 finish(.failure(error))
             }
-        case .failed(let error):
+        case .waiting(let error), .failed(let error):
             finish(.failure(Self.transportError(error)))
         case .cancelled:
             finish(.failure(CancellationError()))
@@ -392,7 +427,26 @@ final class PinnedHTTP1Request: @unchecked Sendable {
             if let data { responseData.append(data) }
             if responseData.count > Self.maximumResponseBytes {
                 finish(.failure(ReadBoardGoConnectionError.connectionFailed))
-            } else if let error {
+                return
+            }
+
+            // Network.framework may deliver the final bytes together with a TCP
+            // reset when the peer closes immediately after send. Content-Length
+            // is the HTTP message boundary, so a fully received response remains
+            // valid even when the same callback also carries a transport error.
+            do {
+                if let response = try Self.completeResponseIfAvailable(
+                    responseData, request: request
+                ) {
+                    finish(.success(response))
+                    return
+                }
+            } catch {
+                finish(.failure(error))
+                return
+            }
+
+            if let error {
                 finish(.failure(Self.transportError(error)))
             } else if isComplete {
                 do {
@@ -475,9 +529,79 @@ final class PinnedHTTP1Request: @unchecked Sendable {
     static func parseResponse(
         _ data: Data, request: URLRequest
     ) throws -> (Data, URLResponse) {
+        guard let parsedHead = try parsedResponseHead(data) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        var rawBody = Data(data[parsedHead.bodyOffset...])
+        let body: Data
+        let method = (request.httpMethod ?? "GET").uppercased()
+        let hasNoBody = method == "HEAD"
+            || (100..<200).contains(parsedHead.status)
+            || parsedHead.status == 204
+            || parsedHead.status == 304
+        if hasNoBody {
+            body = Data()
+        } else if parsedHead.transferEncoding?.contains("chunked") == true {
+            body = try decodeChunked(rawBody)
+        } else if let contentLength = parsedHead.contentLength {
+            guard rawBody.count >= contentLength else {
+                throw ReadBoardGoConnectionError.connectionFailed
+            }
+            rawBody = Data(rawBody.prefix(contentLength))
+            body = rawBody
+        } else {
+            body = rawBody
+        }
+        guard let url = request.url,
+              let response = HTTPURLResponse(
+                url: url, statusCode: parsedHead.status, httpVersion: "HTTP/1.1",
+                headerFields: parsedHead.headers) else {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        return (body, response)
+    }
+
+    /// Returns a response as soon as the HTTP message boundary is present. A
+    /// missing value means more bytes (or EOF for a close-delimited response)
+    /// are still required. Malformed headers fail immediately.
+    static func completeResponseIfAvailable(
+        _ data: Data, request: URLRequest
+    ) throws -> (Data, URLResponse)? {
+        guard let parsedHead = try parsedResponseHead(data) else { return nil }
+        let bodyCount = data.count - parsedHead.bodyOffset
+        let method = (request.httpMethod ?? "GET").uppercased()
+        let hasNoBody = method == "HEAD"
+            || (100..<200).contains(parsedHead.status)
+            || parsedHead.status == 204
+            || parsedHead.status == 304
+        if hasNoBody {
+            return try parseResponse(data, request: request)
+        }
+        if parsedHead.transferEncoding?.contains("chunked") == true {
+            do {
+                _ = try decodeChunked(Data(data[parsedHead.bodyOffset...]))
+                return try parseResponse(data, request: request)
+            } catch {
+                return nil
+            }
+        }
+        guard let contentLength = parsedHead.contentLength,
+              bodyCount >= contentLength else { return nil }
+        return try parseResponse(data, request: request)
+    }
+
+    private struct ParsedResponseHead {
+        let status: Int
+        let headers: [String: String]
+        let bodyOffset: Int
+        let transferEncoding: String?
+        let contentLength: Int?
+    }
+
+    private static func parsedResponseHead(_ data: Data) throws -> ParsedResponseHead? {
         let separator = Data("\r\n\r\n".utf8)
-        guard let range = data.range(of: separator),
-              let head = String(data: data[..<range.lowerBound], encoding: .utf8) else {
+        guard let range = data.range(of: separator) else { return nil }
+        guard let head = String(data: data[..<range.lowerBound], encoding: .utf8) else {
             throw ReadBoardGoConnectionError.connectionFailed
         }
         let lines = head.components(separatedBy: "\r\n")
@@ -491,6 +615,7 @@ final class PinnedHTTP1Request: @unchecked Sendable {
             throw ReadBoardGoConnectionError.connectionFailed
         }
         var headers: [String: String] = [:]
+        var contentLengths: [Int] = []
         for line in lines.dropFirst() {
             guard let colon = line.firstIndex(of: ":") else {
                 throw ReadBoardGoConnectionError.connectionFailed
@@ -501,6 +626,17 @@ final class PinnedHTTP1Request: @unchecked Sendable {
             guard isValidHTTPToken(name), !containsForbiddenHeaderValue(value) else {
                 throw ReadBoardGoConnectionError.connectionFailed
             }
+            if name.caseInsensitiveCompare("Content-Length") == .orderedSame {
+                for component in value.split(separator: ",", omittingEmptySubsequences: false) {
+                    let candidate = component.trimmingCharacters(in: .whitespaces)
+                    guard !candidate.isEmpty,
+                          candidate.utf8.allSatisfy({ (48...57).contains($0) }),
+                          let length = Int(candidate) else {
+                        throw ReadBoardGoConnectionError.connectionFailed
+                    }
+                    contentLengths.append(length)
+                }
+            }
             if let existingKey = headers.keys.first(where: {
                 $0.caseInsensitiveCompare(name) == .orderedSame
             }), let existing = headers[existingKey] {
@@ -509,30 +645,27 @@ final class PinnedHTTP1Request: @unchecked Sendable {
                 headers[name] = value
             }
         }
-        var rawBody = Data(data[range.upperBound...])
         let transferEncoding = headers.first { $0.key.caseInsensitiveCompare(
             "Transfer-Encoding") == .orderedSame }?.value.lowercased()
-        let contentLength = headers.first { $0.key.caseInsensitiveCompare(
-            "Content-Length") == .orderedSame }.flatMap { Int($0.value) }
-        let body: Data
-        if transferEncoding?.contains("chunked") == true {
-            body = try decodeChunked(rawBody)
-        } else if let contentLength {
-            guard contentLength >= 0, rawBody.count >= contentLength else {
-                throw ReadBoardGoConnectionError.connectionFailed
-            }
-            rawBody = Data(rawBody.prefix(contentLength))
-            body = rawBody
-        } else {
-            body = rawBody
-        }
-        guard let url = request.url,
-              let response = HTTPURLResponse(
-                url: url, statusCode: status, httpVersion: "HTTP/1.1",
-                headerFields: headers) else {
+        guard Set(contentLengths).count <= 1 else {
             throw ReadBoardGoConnectionError.connectionFailed
         }
-        return (body, response)
+        if transferEncoding != nil, !contentLengths.isEmpty {
+            // Conflicting message boundaries are unsafe and must never be
+            // guessed, even though the ReadBoard server does not emit them.
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        // This transport only decodes a single chunked transfer coding. Do not
+        // silently accept unsupported chains or substring matches.
+        if let transferEncoding, transferEncoding != "chunked" {
+            throw ReadBoardGoConnectionError.connectionFailed
+        }
+        return ParsedResponseHead(
+            status: status,
+            headers: headers,
+            bodyOffset: range.upperBound,
+            transferEncoding: transferEncoding,
+            contentLength: contentLengths.first)
     }
 
     static func decodeChunked(_ data: Data) throws -> Data {
@@ -542,12 +675,33 @@ final class PinnedHTTP1Request: @unchecked Sendable {
         while true {
             guard let lineEnd = data[cursor...].range(of: crlf)?.lowerBound,
                   let line = String(data: data[cursor..<lineEnd], encoding: .utf8),
-                  let size = Int(line.split(separator: ";", maxSplits: 1)[0], radix: 16),
+                  let sizeText = line.split(separator: ";", maxSplits: 1,
+                                            omittingEmptySubsequences: false).first,
+                  !sizeText.isEmpty,
+                  sizeText.utf8.allSatisfy({ (48...57).contains($0)
+                      || (65...70).contains($0) || (97...102).contains($0) }),
+                  let size = Int(sizeText, radix: 16),
                   size >= 0 else {
                 throw ReadBoardGoConnectionError.connectionFailed
             }
             cursor = data.index(lineEnd, offsetBy: 2)
-            if size == 0 { return decoded }
+            if size == 0 {
+                // The last chunk is followed by a trailer section and its
+                // terminating empty line. A bare 0\r\n is still truncated.
+                while true {
+                    guard let end = data[cursor...].range(of: crlf)?.lowerBound else {
+                        throw ReadBoardGoConnectionError.connectionFailed
+                    }
+                    if end == cursor { return decoded }
+                    guard let trailer = String(data: data[cursor..<end], encoding: .utf8),
+                          let colon = trailer.firstIndex(of: ":"),
+                          isValidHTTPToken(String(trailer[..<colon])),
+                          !containsForbiddenHeaderValue(String(trailer[trailer.index(after: colon)...])) else {
+                        throw ReadBoardGoConnectionError.connectionFailed
+                    }
+                    cursor = data.index(end, offsetBy: 2)
+                }
+            }
             guard let bodyEnd = data.index(cursor, offsetBy: size, limitedBy: data.endIndex),
                   bodyEnd <= data.endIndex else {
                 throw ReadBoardGoConnectionError.connectionFailed

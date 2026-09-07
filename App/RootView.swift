@@ -5,6 +5,13 @@ struct RootView: View {
   @Environment(ReadBoardGoSession.self) private var session
 
   var body: some View {
+    VStack(spacing: 0) {
+      if session.isConnected, let message = session.remoteHealth.message ?? session.cacheNotice
+        ?? (session.isOffline ? "连接暂不可用" : nil) {
+        remoteHealthBanner(session.isOffline ? offlineMessage(fallback: message) : message)
+          .padding(.vertical, 8)
+          .padding(.horizontal, 16)
+      }
     Group {
       if session.isRestoringConnection {
         VStack(spacing: 12) {
@@ -20,15 +27,9 @@ struct RootView: View {
         ConnectionView()
       }
     }
+    }
     .background(Color.goBackground)
     .tint(Color.goAccent)
-    .overlay(alignment: .top) {
-      if session.isConnected, let message = session.remoteHealth.message {
-        remoteHealthBanner(session.isOffline ? offlineMessage(fallback: message) : message)
-          .padding(.top, 10)
-          .padding(.horizontal, 16)
-      }
-    }
     #if os(macOS)
       .frame(minWidth: 900, minHeight: 620)
     #endif
@@ -44,7 +45,7 @@ struct RootView: View {
     guard let cachedAt = session.cachedAt else {
       return "已断开连接，正在使用本机最后保存的内容"
     }
-    return "离线只读 · 数据更新于 \(cachedAt.formatted(date: .abbreviated, time: .shortened))"
+    return "有限缓存阅读 · 已读/星标将暂存 · 数据更新于 \(cachedAt.formatted(date: .abbreviated, time: .shortened))"
   }
 
   private func remoteHealthBanner(_ message: String) -> some View {
