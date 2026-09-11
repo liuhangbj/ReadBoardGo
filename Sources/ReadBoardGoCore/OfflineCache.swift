@@ -46,6 +46,47 @@ public actor ReadBoardGoOfflineCache {
         var recoveryNotice: String?
     }
 
+    /// Same on-disk object as Envelope, excluding the large details member.
+    /// Details are appended as separately encoded JSON members below. The reader
+    /// and older app versions still decode the original single-file format.
+    private struct EnvelopeHeader: Encodable {
+        let serverKey: String?
+        let profile: Record<RemoteServerProfile>?
+        let librarySnapshot: Record<LibrarySnapshot>?
+        let sourceCatalog: Record<SourceCatalogSnapshot>?
+        let pages: [String: Record<ContentPage>]
+        let pendingMutations: [ReadingMutation]
+        let updatedAt: TimeInterval?
+        let recoveryNotice: String?
+
+        init(_ value: Envelope) {
+            serverKey = value.serverKey
+            profile = value.profile
+            librarySnapshot = value.librarySnapshot
+            sourceCatalog = value.sourceCatalog
+            pages = value.pages
+            pendingMutations = value.pendingMutations
+            updatedAt = value.updatedAt
+            recoveryNotice = value.recoveryNotice
+        }
+    }
+
+    private struct EncodedDetail {
+        let record: Record<ContentDetail>
+        let member: Data
+    }
+
+    // Retaining encoded text trades a bounded amount of memory for avoiding
+    // repeated JSON escaping of every unchanged article on each small update.
+    private static let maximumEncodedDetailBytes = 32 * 1_024 * 1_024
+    private var encodedDetails: [String: EncodedDetail] = [:]
+    private var encodedDetailBytes = 0
+    private var detailEncodingCount = 0
+
+    var persistenceEncodingMetrics: (detailEncodes: Int, retainedDetailBytes: Int) {
+        (detailEncodingCount, encodedDetailBytes)
+    }
+
     private let fileURL: URL
     private var envelope: Envelope
     private var mutationFlush: Task<Void, Never>?
@@ -122,6 +163,8 @@ public actor ReadBoardGoOfflineCache {
         // Do not discard the old in-memory cache if durable preparation fails.
         try write(replacement, to: fileURL)
         envelope = replacement
+        encodedDetails.removeAll()
+        encodedDetailBytes = 0
         transportOffline = false
     }
 
@@ -522,10 +565,52 @@ public actor ReadBoardGoOfflineCache {
         #if os(macOS)
         try manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
         #endif
-        try encoder.encode(value).write(to: target, options: .atomic)
+        try encodeEnvelope(value).write(to: target, options: .atomic)
         #if os(macOS)
         try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
         #endif
+    }
+
+    private func encodeEnvelope(_ value: Envelope) throws -> Data {
+        // Also used when archiving/restoring another identity. Compare the full
+        // record, not just its ID or timestamp; a retired identity cannot leak a
+        // previously encoded article with a coincidentally matching ID.
+        for key in encodedDetails.keys where value.details[key] == nil {
+            if let removed = encodedDetails.removeValue(forKey: key) {
+                encodedDetailBytes -= removed.member.count
+            }
+        }
+        var data = try encoder.encode(EnvelopeHeader(value))
+        guard data.last == UInt8(ascii: "}") else {
+            throw EncodingError.invalidValue(value, .init(
+                codingPath: [], debugDescription: "Cache header must be a JSON object"))
+        }
+        data.removeLast()
+        data.append(contentsOf: ",\"details\":{".utf8)
+        for (index, key) in value.details.keys.sorted().enumerated() {
+            guard let record = value.details[key] else { continue }
+            if index > 0 { data.append(UInt8(ascii: ",")) }
+            if let cached = encodedDetails[key],
+               cached.record.updatedAt == record.updatedAt,
+               cached.record.value == record.value {
+                data.append(cached.member)
+            } else {
+                if let removed = encodedDetails.removeValue(forKey: key) {
+                    encodedDetailBytes -= removed.member.count
+                }
+                var member = try encoder.encode(key)
+                member.append(UInt8(ascii: ":"))
+                member.append(try encoder.encode(record))
+                detailEncodingCount += 1
+                if member.count <= Self.maximumEncodedDetailBytes - encodedDetailBytes {
+                    encodedDetails[key] = EncodedDetail(record: record, member: member)
+                    encodedDetailBytes += member.count
+                }
+                data.append(member)
+            }
+        }
+        data.append(contentsOf: "}}".utf8)
+        return data
     }
 }
 

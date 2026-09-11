@@ -5,6 +5,55 @@ import ReadBoardRemote
 @testable import ReadBoardGoCore
 
 final class OfflineGatewayTests: XCTestCase {
+    func testFailedOfflinePersistenceRollsBackAndCanRetryAfterStorageRecovers() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("readboard-offline-write-failure-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("cache.json")
+        let query = ContentQuery()
+        let item = ContentSummary(id: 1, contentType: "article", source: "web",
+            sourceType: nil, sourceID: nil, sourceName: nil, title: "Isolated sample",
+            author: nil, url: "https://example.com/1", language: nil, publishedAt: nil,
+            excerpt: nil, score: nil, summary: nil, fetchStatus: 2, isRead: false,
+            isStarred: false, imageURL: nil, hasTranslation: false, hasTranscript: false,
+            isMedia: false, translatedHead: nil, translatedTitle: nil, hasFulltext: true,
+            hasExport: false, hasUnmetProcessing: false, accessState: nil)
+        let cache = ReadBoardGoOfflineCache(fileURL: file)
+        try await cache.activate(serverKey: "isolated-failure-credential")
+        await cache.storePage(ContentPage(items: [item], nextCursor: nil), query: query)
+        let originalData = try Data(contentsOf: file)
+        // A directory at the exact file path deterministically rejects atomic
+        // writes, without relying on the test process's permission privileges.
+        try FileManager.default.removeItem(at: file)
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+        await cache.setTransportOffline(true)
+        let transport = OfflineFixtureTransport()
+        let client = ReadBoardHTTPClient(baseURL: URL(string: "https://isolated.invalid")!,
+            bearerToken: "isolated-token", loader: transport)
+        let gateway = CachedRemoteLibraryGateway(client: client, cache: cache,
+            serverKey: "isolated-failure-credential")
+        do {
+            _ = try await gateway.setRead(contentID: 1, isRead: true)
+            XCTFail("An offline operation must not succeed when durable storage fails")
+        } catch let error as LibraryGatewayError {
+            XCTAssertEqual(error, .operationFailed("无法保存离线操作，请检查本机存储空间后重试。"))
+        }
+        let failedStatus = await cache.status()
+        let failedPage = await cache.page(query: query)
+        XCTAssertEqual(failedStatus.pendingReadingMutations, 0)
+        XCTAssertEqual(failedPage?.items.first?.isRead, false)
+        try FileManager.default.removeItem(at: file)
+        try originalData.write(to: file, options: .atomic)
+        _ = try await gateway.setRead(contentID: 1, isRead: true)
+        let restarted = ReadBoardGoOfflineCache(fileURL: file)
+        let finalPage = await restarted.page(query: query)
+        let finalStatus = await restarted.status()
+        XCTAssertEqual(finalPage?.items.first?.isRead, true)
+        XCTAssertEqual(finalStatus.pendingReadingMutations, 1)
+        let requests = await transport.requests
+        XCTAssertEqual(requests, 0)
+    }
+
     func testSocialInboxWritesPersistAcrossRestartAndFlushThroughRemoteContract() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("readboard-offline-gateway-\(UUID().uuidString)")
